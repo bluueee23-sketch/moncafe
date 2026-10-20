@@ -24,7 +24,7 @@ img{max-width:100%}
 .bub.hb.say{background:#2F7A5A;border-color:#2F7A5A;color:#FFFFFF}
 .bub.hb.say::after{border-top-color:#2F7A5A}
 .hname.human{background:#2F5D4C;color:#FFFFFF;opacity:1}
-.hname.human.me{background:var(--mine,#C2577A)}
+.hname.human.me{background:var(--mine,#C2577A);color:#FFFFFF}
 .hname.human.me .dot{background:#FFD6E2}
 .hname.npc{background:rgba(255,255,255,.82);color:#6D6255;font-weight:500;opacity:1}
 .hname .dot,.legend .dot{display:inline-block;width:.6em;height:.6em;border-radius:50%;background:#7BE0A6;margin-right:.35em;vertical-align:.02em;box-shadow:0 0 0 1.5px rgba(255,255,255,.7)}
@@ -1865,7 +1865,7 @@ function jdRest(kind,ms){clearInterval(JDC.walkT);JDC.state=kind;JDC.until=Date.
 function jdMySpot(){const me=PEOPLE.find(e=>e.isMe&&e.seat!=null&&e.seat>=0);return me?seatSpot(me.seat):null}
 function myPeerId(){const p=ROOM&&!roomDead?ROOM.peers().find(x=>x.sameTab):null;return p?p.peer:null}
 // beside the chair on the outer side, down on the floor, so faces stay visible
-function seatSpot(seat){const tb=TABLES[seat>>1];if(!tb)return null;const side=seat%2,hx=tb.cx+(side?58:-58)*TS;return{x:hx+(side?95:-95)*TS,y:tb.fy+2}}
+function seatSpot(seat){const tb=TABLES[seat>>1];if(!tb)return null;const side=seat%2;return{x:tb.cx+(side?24:-24)*TS,y:tb.fy+2}}
 // the aisles: just below each row of tables (and the open floor under the last row)
 // free floor between tables (and at the row ends), level with the chairs, so nobody's face or name is covered
 function gaps(){const out=[];const rows=[...new Set(TABLES.map(t=>t.fy))];
@@ -1881,7 +1881,9 @@ function catApply(c,first){
   JDC.shared=true;JDC.fav=c.fav||null;
   if(c.say&&c.say.at!==JDC.sayAt){JDC.sayAt=c.say.at;if(!first||Date.now()-0<1e15)jdBubble(String(c.say.t||'').replace('{fav}',favName(c.fav)),4000)}
   if(c.v===JDC.v)return;JDC.v=c.v;
-  const at=c.at||{},p=at.seat!=null?seatSpot(at.seat):floorSpot(at.u??.4,at.v??.5);if(!p)return;
+  const at=c.at||{};let seat=at.seat;
+  if(seat!=null&&c.fav){const f=PEOPLE.find(e=>!e.isNpc&&(e.peer===c.fav||(e.isMe&&c.fav===myPeerId())));if(f&&f.seat!=null&&f.seat>=0)seat=f.seat}
+  const p=seat!=null?seatSpot(seat):floorSpot(at.u??.4,at.v??.5);if(!p)return;
   if(c.mode==='walk'&&!first){jdWalkTo(p.x,p.y,()=>{clearInterval(JDC.walkT);jdSprite('sit')},Math.max(.4,(c.rem||1000)/1000))}
   else{clearInterval(JDC.walkT);JDC.x=p.x;JDC.y=p.y;JDC.state=c.mode==='walk'?'sit':c.mode;JDC.until=Date.now()+(c.rem||0);jdSprite(c.mode==='sleep'?'sleep':'sit');jdPlace(!first,.8)}
 }
