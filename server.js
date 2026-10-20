@@ -122,6 +122,7 @@ const DRINKS = new Set(['ia', 'ha', 'cl', 'vl', 'ml', 'es', 'cb', 'le', 'hc', 'j
 const CAT_LINES = ['냐옹', '츄르 줘', '골골골…', '공부해라냥', '(빤히)', '냥?', '꾹꾹이 중'];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const worlds = new Map();
+const chats = new Map(); // room -> recent speech bubbles [{id, name, t, at}]
 
 function getWorld(room) {
   if (!worlds.has(room)) {
@@ -155,7 +156,7 @@ function spawnNpc(w, name, d) {
   npcSay(n, '안녕하세요~');
   w.npcs.push(n);
 }
-function catWalk(cat, to, now) { cat.mode = 'walk'; cat.at = to; cat.dur = 2.5 + Math.random() * 3; cat.until = now + cat.dur * 1000; cat.v++; }
+function catWalk(cat, to, now) { cat.mode = 'walk'; cat.at = to; cat.dur = 7 + Math.random() * 5; cat.until = now + cat.dur * 1000; cat.v++; }
 function catRest(cat, kind, ms, now) { cat.mode = kind; cat.dur = 0; cat.until = now + ms; cat.v++; if (kind === 'sleep') cat.say = { t: 'Zzz…', at: now }; }
 
 function tickWorld(room) {
@@ -186,7 +187,7 @@ function tickWorld(room) {
     if (cat.mode === 'walk') {
       const nearFav = cat.at && cat.at.seat != null && cat.at.seat === favSeat;
       if (nearFav) { catRest(cat, 'sit', 15000 + Math.random() * 15000, now); cat.say = { t: '골골골…', at: now }; }
-      else catRest(cat, Math.random() < 0.25 ? 'sleep' : 'sit', 6000 + Math.random() * 9000, now);
+      else catRest(cat, Math.random() < 0.25 ? 'sleep' : 'sit', 10000 + Math.random() * 12000, now);
     } else {
       const r = Math.random();
       if (favSeat != null && r < 0.55) catWalk(cat, { seat: favSeat }, now);
@@ -253,11 +254,23 @@ server.on('upgrade', (req, socket) => {
       if (prev && prev.conn !== conn) { prev.conn.send(JSON.stringify({ t: 'replaced' })); prev.conn.close(); }
       broadcast(room);
       if (!getWorld(room).seeded) tickWorld(room); else conn.send(worldMsg(room));
+      conn.send(JSON.stringify({ t: 'chatlog', list: chats.get(room) || [] }));
     } else if (m.t === 'act' && me) {
       handleAct(me.room, me.id, m);
     } else if (m.t === 'state' && me) {
       const entry = rooms.get(me.room) && rooms.get(me.room).get(me.id);
-      if (entry && m.state && typeof m.state === 'object') { entry.state = m.state; broadcast(me.room); }
+      if (entry && m.state && typeof m.state === 'object') {
+        const before = entry.state && entry.state.say, said = m.state.say;
+        entry.state = m.state; broadcast(me.room);
+        // keep what people say so others can read it later
+        if (said && typeof said.t === 'string' && said.t.trim() && (!before || before.at !== said.at)) {
+          const e = { id: me.id, name: String(m.state.nick || '').slice(0, 12), t: said.t.trim().slice(0, 20), at: Date.now() };
+          if (!chats.has(me.room)) chats.set(me.room, []);
+          const log = chats.get(me.room); log.push(e); if (log.length > 200) log.splice(0, log.length - 200);
+          const msg = JSON.stringify({ t: 'chat', e });
+          for (const x of rooms.get(me.room).values()) x.conn.send(msg);
+        }
+      }
     }
   }, () => {
     if (!me) return;

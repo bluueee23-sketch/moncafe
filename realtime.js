@@ -56,8 +56,10 @@
       // shared world (AI guests, cat) — only when our own server is connected
       onWorld(fn) { worldFns.add(fn); if (lastWorld) setTimeout(() => fn(lastWorld), 0); return () => worldFns.delete(fn); },
       act(msg) { return transport.act ? transport.act(msg) : false; },
+      onChat(fn) { chatFns.add(fn); return () => chatFns.delete(fn); },
     };
-    let lastWorld = null; const worldFns = new Set();
+    let lastWorld = null; const worldFns = new Set(); const chatFns = new Set();
+    api._chat = (m) => { for (const fn of chatFns) { try { fn(m); } catch (e) { console.error(e); } } };
     api._world = (w) => { lastWorld = w; for (const fn of worldFns) { try { fn(w); } catch (e) { console.error(e); } } };
     // called by the transport
     api._set = (all) => {
@@ -168,6 +170,7 @@
             let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
             if (m.t === 'peers') room._set(m.all || {});
             if (m.t === 'world') room._world(m);
+            if (m.t === 'chat' || m.t === 'chatlog') room._chat(m);
             if (m.t === 'replaced') { stopped = true; room._set({}); showRetired(); }
           };
           ws.onclose = () => {
