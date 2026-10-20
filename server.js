@@ -120,9 +120,13 @@ server.on('upgrade', (req, socket) => {
       const room = clean(m.room, 40) || 'main', id = clean(m.id, 32);
       if (!id) return;
       if (!rooms.has(room)) rooms.set(room, new Map());
-      if (rooms.get(room).size >= 40) { conn.send(JSON.stringify({ t: 'full' })); conn.close(); return; }
+      // same browser opened again (new tab, refresh): keep one person, retire the older window
+      const prev = rooms.get(room).get(id);
+      if (!prev && rooms.get(room).size >= 40) { conn.send(JSON.stringify({ t: 'full' })); conn.close(); return; }
       me = { room, id };
       rooms.get(room).set(id, { conn, state: m.state && typeof m.state === 'object' ? m.state : {} });
+      // the new window takes the seat first, then the older one is told to stop
+      if (prev && prev.conn !== conn) { prev.conn.send(JSON.stringify({ t: 'replaced' })); prev.conn.close(); }
       broadcast(room);
     } else if (m.t === 'state' && me) {
       const entry = rooms.get(me.room) && rooms.get(me.room).get(me.id);
@@ -131,7 +135,7 @@ server.on('upgrade', (req, socket) => {
   }, () => {
     if (!me) return;
     const room = rooms.get(me.room);
-    if (room) { room.delete(me.id); if (!room.size) rooms.delete(me.room); else broadcast(me.room); }
+    if (room && room.get(me.id) && room.get(me.id).conn === conn) { room.delete(me.id); if (!room.size) rooms.delete(me.room); else broadcast(me.room); }
   });
   conns.add(conn);
   socket.on('close', () => conns.delete(conn));

@@ -13,7 +13,11 @@
   const CFG = window.CAFE_CONFIG || {};
   const params = new URLSearchParams(location.search);
   const ROOM = (params.get('room') || CFG.room || 'main').replace(/[^\w가-힣-]/g, '').slice(0, 40) || 'main';
-  const MY_ID = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)) .replace(/-/g, '').slice(0, 16);
+  const newId = () => (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now()).replace(/-/g, '').slice(0, 16);
+  // one id per browser, so refreshing or opening another tab is still the same person
+  let DEVICE_ID = null;
+  try { DEVICE_ID = localStorage.getItem('barista.device'); if (!DEVICE_ID) { DEVICE_ID = newId(); localStorage.setItem('barista.device', DEVICE_ID); } } catch (e) {}
+  let MY_ID = newId(); // per tab; switched to DEVICE_ID when a server connection is used
 
   /* ---------- a tiny presence room with the same shape the café code expects ---------- */
   function makeRoom(transport) {
@@ -126,9 +130,20 @@
     };
   }
 
+  function showRetired() {
+    if (document.getElementById('cafe-retired')) return;
+    const d = document.createElement('div'); d.id = 'cafe-retired';
+    d.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:99;background:#2A211B;color:#FBF8F2;padding:10px 14px;border-radius:12px;font:14px system-ui,sans-serif;display:flex;gap:10px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:calc(100% - 32px)';
+    const t = document.createElement('span'); t.textContent = '다른 창에서 카페를 열어서 이 창은 매장 연결을 멈췄어요.';
+    const b = document.createElement('button'); b.textContent = '이 창으로 다시 연결';
+    b.style.cssText = 'border:0;border-radius:99px;padding:5px 12px;background:#86C9AC;color:#10201A;font:inherit;cursor:pointer;white-space:nowrap';
+    b.onclick = () => location.reload();
+    d.append(t, b); document.body.appendChild(d);
+  }
+
   /* ---------- transport 3: our own server.js on Render (/ws) ---------- */
   function wsTransport() {
-    let room, ws, mine = {}, retry = 0, everOpen = false;
+    let room, ws, mine = {}, retry = 0, everOpen = false, stopped = false;
     const url = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
     const t = {
       send(state) { mine = { ...state }; if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'state', state: mine })); },
@@ -143,9 +158,14 @@
             ws.send(JSON.stringify({ t: 'join', room: ROOM, id: MY_ID, state: mine }));
             if (!everOpen) { everOpen = true; onOpen && onOpen(); }
           };
-          ws.onmessage = (ev) => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } if (m.t === 'peers') room._set(m.all || {}); };
+          ws.onmessage = (ev) => {
+            let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+            if (m.t === 'peers') room._set(m.all || {});
+            if (m.t === 'replaced') { stopped = true; room._set({}); showRetired(); }
+          };
           ws.onclose = () => {
             clearTimeout(giveUp); room._connected(false);
+            if (stopped) return;                               // another window took over
             if (!everOpen) { onFail && onFail(); return; }   // no server here: fall back
             room._set({});                                     // lost connection: show only me until back
             setTimeout(connect, Math.min(15000, 1000 * 2 ** retry++));
@@ -166,6 +186,7 @@
       const go = (transport) => { const r = makeRoom(transport); transport.start(r); resolve(r); };
       const tryServer = location.protocol.startsWith('http') && 'WebSocket' in window && CFG.server !== false;
       if (!useSupabase && tryServer) {
+        if (DEVICE_ID) MY_ID = DEVICE_ID;
         const t = wsTransport(), r = makeRoom(t);
         t.start(r, () => resolve(r), () => { if ('BroadcastChannel' in window) go(tabTransport()); else resolve(null); });
       } else if (useSupabase) {
