@@ -484,7 +484,9 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
 .hname.me{color:var(--accent)}
 .hname .ftime{display:block;text-align:center;font-size:.92em;line-height:1.25;margin:0;font-variant-numeric:tabular-nums}
 .hname .nl{display:flex;align-items:center;justify-content:center;min-width:0}
-.hname .nm{font-weight:inherit;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hname .nm{font-weight:inherit;min-width:0;white-space:normal;word-break:keep-all;overflow-wrap:anywhere;text-align:center;line-height:1.2;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hname{border-radius:9px}
 .hname .nl>i,.hname .fh{flex:none}
 .hname.human{border-radius:9px;padding-top:1px;padding-bottom:1px}
 .hname .ftime:empty{display:none}
@@ -1467,6 +1469,7 @@ function handleCheers(list){
     if(c.k==='cheer')toast(`${who}님이 응원을 보냈어요. 화이팅!`);
     else if(c.k==='gift'){const r=byId(c.d);toast(`${who}님이 ${r?r.n:'커피'} 한 잔 쐈어요!`)}
     else if(c.k==='sit')toast(`${who}님이 옆자리에 앉았어요. 같이 집중!`);
+    else if(c.k==='steal'){const r=byId(c.d);toast(`${who}님이 내 ${r?r.n:'음료'} 뺏어먹으러 옆에 앉았어요!`)}
   }
 }
 /* minime: pixel character */
@@ -2247,10 +2250,27 @@ function showSel(){
   mk(MUTED.has(e.peer)?'알림음 다시 켜기':'이 사람 알림음 끄기','',()=>{if(MUTED.has(e.peer))MUTED.delete(e.peer);else MUTED.add(e.peer);saveMute();
     toast(MUTED.has(e.peer)?`${e.name}님 말풍선 알림음을 껐어요.`:`${e.name}님 말풍선 알림음을 다시 켰어요.`);showSel()});
   box.appendChild(log);
-  mk('옆자리 앉기','sit',()=>{const p=ROOM&&ROOM.peers().find(x=>x.peer===e.peer);
-    if(!p||(p.presence||{}).st!=='study'||!(remOf(p)>30)){toast(`${e.name}님이 공부 중일 때 옆자리에 앉을 수 있어요.`);return}
-    const idx=e.seat,nb=idx%2?idx-1:idx+1;if(!PEOPLE.some(x=>!x.isMe&&x.seat===nb)){mySeat=nb;try{localStorage.setItem('barista.seat',String(nb))}catch(_){}}
-    sitWith(p,e.name)});
+  mk('옆자리 앉기','',()=>sitNext(e));
+  mk('음료 뺏어먹기','sit',()=>stealDrink(e));
+}
+function sitNext(e,quiet){
+  if(e.seat==null||e.seat<0){toast(`${e.name}님이 아직 자리에 안 앉았어요.`);return false}
+  const nb=e.seat%2?e.seat-1:e.seat+1;
+  if(PEOPLE.some(x=>!x.isMe&&!x.isNpc&&x.seat===nb)){toast(`${e.name}님 옆자리에 이미 다른 친구가 있어요.`);return false}
+  mySeat=nb;try{localStorage.setItem('barista.seat',String(nb))}catch(_){}
+  syncPresence();lastSig='';renderFriends();
+  if(!quiet){sendCheer(e.peer,'sit');toast(`${e.name}님 옆자리로 옮겼어요.`)}
+  return true;
+}
+function stealDrink(e){
+  const r=byId((e.pr||{}).d);
+  if(!r){toast(`${e.name}님이 아직 음료가 없어요.`);return}
+  if(CUR==='scrStudy'&&S.running){toast('지금 내 타이머가 돌아가는 중이에요. 다 마시고 뺏어먹어요!');return}
+  if(!sitNext(e,true))return;
+  const i=ideal(r);MADE={r,kind:i.kind,L:i.L,ice:i.ice,st:3,idx:-1,left:1};saveCup();
+  openStudy();$('sGo').click();
+  sendCheer(e.peer,'steal',{d:r.id});addFriendMin(e.peer,e.name,1);
+  toast(`${e.name}님 ${r.n} 뺏어먹는 중 ㅋㅋ 내 타이머 ${S.dur}분 시작!`);
 }
 function say(t){
   t=(t||'').trim().slice(0,20);if(!t)return;
@@ -2263,13 +2283,6 @@ $('pickSeat').onclick=()=>setPick(!$('hall').classList.contains('pick'));
 $('sayGo').onclick=()=>say($('sayIn').value);
 $('sayIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();say($('sayIn').value)}});
 ['화이팅!','졸려…','리필 각','5분만 쉬자','집중 모드'].forEach(t=>{const b=document.createElement('button');b.className='mini';b.textContent=t;b.onclick=()=>say(t);$('quick').appendChild(b)});
-function sitWith(p,nm){
-  const pr=p.presence||{},r=byId(pr.d),s=remOf(p);if(!r||!s)return;
-  if(CUR==='scrStudy'&&S.running){toast('지금 내 타이머가 돌아가는 중이에요. 자리 정리 후 앉아주세요.');return}
-  if(!MADE||CUR!=='scrDone'){const i=ideal(r);MADE={r,kind:i.kind,L:i.L,ice:i.ice,st:3,idx:-1,left:1};saveCup()}
-  openStudy({dur:pr.dur,rem:s});sendCheer(p.peer,'sit');syncPresence();
-  toast(`${nm}님 옆자리에 앉았어요. ${mmss(s)} 같이 집중!`);
-}
 setInterval(()=>{if(!document.hidden)renderFriends()},1000);
 (async()=>{
   const cl=window.claude;
