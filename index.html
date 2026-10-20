@@ -1723,7 +1723,7 @@ function npcTick(){
   const now=Date.now();
   for(const n of NPCS){
     if(n.st==='hold'){n.left=Math.max(.1,n.left-n.drain*3);if(n.left<=.1){n.st='finished';n.leaveAt=now+25000;npcSay(n,'잘 마셨어요!')}}
-    if(!n.say||now-n.say.at>SAY_MS+4000){if(Math.random()<.04)npcSay(n)}
+    if(!n.say||now-n.say.at>SAY_MS+60000){if(Math.random()<.01)npcSay(n)}
   }
   const gone=NPCS.filter(n=>n.leaveAt&&now>n.leaveAt);if(gone.length)NPCS=NPCS.filter(n=>!gone.includes(n));
   if(NPCS.length<npcTarget()&&Math.random()<.12)spawnNpc();
@@ -2302,13 +2302,13 @@ function layoutHall(w,h){
   // pick the fewest rows that fit all tables, so the room is as large as the box allows
   const NT=SEATS/2;let best=null;
   for(let rows=1;rows<=6;rows++){
-    const vbh0=600+220*(rows-1)+(TWO()?54:0),vbw=Math.max(1000,w&&h?vbh0*w/h:1000),vbh=Math.max(vbh0,vbw*(h/w||0)),n=Math.floor((vbw-60)/(230*TS));
+    const vbh0=600+262*(rows-1)+(TWO()?54:0),vbw=Math.max(1000,w&&h?vbh0*w/h:1000),vbh=Math.max(vbh0,vbw*(h/w||0)),n=Math.floor((vbw-60)/(230*TS));
     if(n*rows>=NT){best={rows,vbw,vbh,n};break}
   }
   VBW=best.vbw;VBH=best.vbh;VX=-(VBW-1000)/2;
   TABLES=[];let left=NT;
   for(let r=0;r<best.rows;r++){const k=Math.min(best.n,Math.ceil(left/(best.rows-r))),sp=VBW/best.n,x0=VX+(VBW-sp*k)/2;
-    for(let j=0;j<k;j++)TABLES.push({cx:x0+sp*(j+.5),fy:520+220*r,k:(j+r)%2});left-=k}
+    for(let j=0;j<k;j++)TABLES.push({cx:x0+sp*(j+.5),fy:520+262*r,k:(j+r)%2});left-=k}
 }
 function fitHall(){
   const bx=$('hallScroll'),hall=$('hall');

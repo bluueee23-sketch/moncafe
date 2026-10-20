@@ -174,7 +174,7 @@ function tickWorld(room) {
   }
   for (const n of w.npcs) {
     if (n.st === 'hold') { n.left = Math.max(0.1, n.left - n.drain * 2); if (n.left <= 0.1) { n.st = 'finished'; n.leaveAt = now + 25000; npcSay(n, '잘 마셨어요!'); } }
-    if ((!n.say || now - n.say.at > 12000) && Math.random() < 0.03) npcSay(n);
+    if ((!n.say || now - n.say.at > 60000) && Math.random() < 0.012) npcSay(n);
   }
   w.npcs = w.npcs.filter((n) => !(n.leaveAt && now > n.leaveAt));
   const target = Math.max(0, Math.min(4, SEATS - count - 3));
