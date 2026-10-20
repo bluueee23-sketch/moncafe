@@ -482,7 +482,11 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
 .hname{position:absolute;transform:translateX(-50%);font-size:11.5px;font-weight:700;white-space:nowrap;color:var(--ink);
   background:color-mix(in srgb,var(--surface) 88%,transparent);border-radius:99px;padding:0 8px;line-height:1.5;pointer-events:none;z-index:2}
 .hname.me{color:var(--accent)}
-.hname .ftime{margin-left:5px;font-size:10.5px}
+.hname .ftime{display:block;text-align:center;font-size:.92em;line-height:1.25;margin:0;font-variant-numeric:tabular-nums}
+.hname .nl{display:flex;align-items:center;justify-content:center;min-width:0}
+.hname .nm{font-weight:inherit;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hname .nl>i,.hname .fh{flex:none}
+.hname.human{border-radius:9px;padding-top:1px;padding-bottom:1px}
 .hname .ftime:empty{display:none}
 .hhit{position:absolute;background:transparent;border:none;border-radius:12px;padding:0;cursor:pointer;z-index:1}
 .hhit:hover{background:rgba(255,255,255,.14)}
@@ -2158,7 +2162,7 @@ function hudPerson(e,x,headY,nameY,hit,side){
   const pop=lastBub[e.key]!==e.bub;lastBub[e.key]=e.bub;
   const kind=e.isNpc?' ai':e.say?' say':' st';
   return (e.bub?`<span class="bub hb ${side||'mid'}${kind}${pop?' pop':''}" style="${pct(x,headY)}"><span class="lg">${esc(e.bub)}</span><span class="sh">${esc(e.bubS)}</span></span>`:'')+
-    `<span class="hname${e.isMe?' me':''}${e.isNpc?' npc':' human'}" style="${pct(Math.min(Math.max(x,VX+90),VX+VBW-90),nameY)}">${e.isNpc?'<i class="aib">AI</i>':'<i class="dot"></i>'}${esc(e.isMe?e.name+' (나)':e.name)}${!e.isNpc&&!e.isMe?friendHearts(e.peer):''}<span class="ftime" data-k="${esc(e.key)}"></span></span>`+
+    `<span class="hname${e.isMe?' me':''}${e.isNpc?' npc':' human'}" style="${pct(Math.min(Math.max(x,VX+70),VX+VBW-70),nameY)};max-width:${((116*TS-10)/VBW*100).toFixed(2)}%"><span class="nl">${e.isNpc?'<i class="aib">AI</i>':'<i class="dot"></i>'}<b class="nm">${esc(e.name)}</b>${!e.isNpc&&!e.isMe?friendHearts(e.peer):''}</span><span class="ftime" data-k="${esc(e.key)}"></span></span>`+
     `<button class="hhit${selKey===e.key?' sel':''}" data-k="${esc(e.key)}" aria-label="${esc(e.name+': '+e.bub)}" style="${box(hit[0],hit[1],hit[2],hit[3])}"></button>`;
 }
 function drawFloor(taken){
