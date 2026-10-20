@@ -1,0 +1,13 @@
+{
+  "name": "moncafe",
+  "version": "1.0.0",
+  "private": true,
+  "description": "오늘의 바리스타: 직접 만든 음료를 들고 알바 동료들과 같이 공부하는 카페",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

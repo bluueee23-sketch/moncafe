@@ -126,13 +126,49 @@
     };
   }
 
+  /* ---------- transport 3: our own server.js on Render (/ws) ---------- */
+  function wsTransport() {
+    let room, ws, mine = {}, retry = 0, everOpen = false;
+    const url = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
+    const t = {
+      send(state) { mine = { ...state }; if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'state', state: mine })); },
+      start(r, onOpen, onFail) {
+        room = r;
+        const connect = () => {
+          let opened = false;
+          ws = new WebSocket(url);
+          const giveUp = setTimeout(() => { if (!opened && !everOpen) { try { ws.close(); } catch (e) {} } }, 20000);
+          ws.onopen = () => {
+            opened = true; clearTimeout(giveUp); retry = 0; room._connected(true);
+            ws.send(JSON.stringify({ t: 'join', room: ROOM, id: MY_ID, state: mine }));
+            if (!everOpen) { everOpen = true; onOpen && onOpen(); }
+          };
+          ws.onmessage = (ev) => { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } if (m.t === 'peers') room._set(m.all || {}); };
+          ws.onclose = () => {
+            clearTimeout(giveUp); room._connected(false);
+            if (!everOpen) { onFail && onFail(); return; }   // no server here: fall back
+            room._set({});                                     // lost connection: show only me until back
+            setTimeout(connect, Math.min(15000, 1000 * 2 ** retry++));
+          };
+        };
+        connect();
+        addEventListener('pagehide', () => { try { ws.close(); } catch (e) {} });
+      },
+    };
+    return t;
+  }
+
   let roomPromise = null;
   function getRoom() {
     if (roomPromise) return roomPromise;
     roomPromise = new Promise((resolve) => {
       const useSupabase = CFG.supabaseUrl && CFG.supabaseAnonKey;
       const go = (transport) => { const r = makeRoom(transport); transport.start(r); resolve(r); };
-      if (useSupabase) {
+      const tryServer = location.protocol.startsWith('http') && 'WebSocket' in window && CFG.server !== false;
+      if (!useSupabase && tryServer) {
+        const t = wsTransport(), r = makeRoom(t);
+        t.start(r, () => resolve(r), () => { if ('BroadcastChannel' in window) go(tabTransport()); else resolve(null); });
+      } else if (useSupabase) {
         const s = document.createElement('script');
         s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
         s.onload = () => go(supabaseTransport());

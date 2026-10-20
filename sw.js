@@ -1,5 +1,5 @@
 /* 오프라인에서도 열리게 기본 파일을 캐시해요. 파일을 고치면 VERSION 숫자를 올려주세요. */
-const VERSION = 'cafe-v1';
+const VERSION = 'cafe-v2';
 const FILES = ['./', './index.html', './realtime.js', './config.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
