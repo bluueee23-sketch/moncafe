@@ -19,7 +19,7 @@ const TYPES = {
   '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png',
   '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.md': 'text/plain; charset=utf-8',
 };
-const PRIVATE = new Set(['server.js', 'package.json', 'render.yaml', '.gitignore']);
+const PRIVATE = new Set(['server.js', 'index.js', 'package.json', 'render.yaml', '.gitignore']);
 
 /* ---------- static files ---------- */
 const server = http.createServer((req, res) => {
@@ -143,4 +143,5 @@ setInterval(() => {
   for (const c of conns) { if (!c.alive) { c.close(); conns.delete(c); continue; } c.alive = false; c.ping(); }
 }, 25000);
 
-server.listen(PORT, () => console.log(`오늘의 바리스타 열림 → http://localhost:${PORT}`));
+server.listen(PORT, '0.0.0.0', () => console.log(`오늘의 바리스타 열림 → port ${PORT}`));
+process.on('uncaughtException', (e) => console.error('오류:', e));

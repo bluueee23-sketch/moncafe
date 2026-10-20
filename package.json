@@ -5,7 +5,8 @@
   "description": "오늘의 바리스타: 직접 만든 음료를 들고 알바 동료들과 같이 공부하는 카페",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "echo no build needed"
   },
   "engines": {
     "node": ">=18"
