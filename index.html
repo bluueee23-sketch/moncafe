@@ -2268,9 +2268,11 @@ function stealDrink(e){
   if(CUR==='scrStudy'&&S.running){toast('지금 내 타이머가 돌아가는 중이에요. 다 마시고 뺏어먹어요!');return}
   if(!sitNext(e,true))return;
   const i=ideal(r);MADE={r,kind:i.kind,L:i.L,ice:i.ice,st:3,idx:-1,left:1};saveCup();
-  openStudy();$('sGo').click();
+  const p=ROOM&&ROOM.peers().find(x=>x.peer===e.peer),pr=(p&&p.presence)||{},rem=p?remOf(p):0;
+  const join=pr.st==='study'&&rem>30;
+  if(join)openStudy({dur:pr.dur,rem});else{openStudy();$('sGo').click()}
   sendCheer(e.peer,'steal',{d:r.id});addFriendMin(e.peer,e.name,1);
-  toast(`${e.name}님 ${r.n} 뺏어먹는 중 ㅋㅋ 내 타이머 ${S.dur}분 시작!`);
+  toast(join?`${e.name}님 ${r.n} 뺏어먹는 중 ㅋㅋ 남은 ${mmss(rem)} 같이 집중!`:`${e.name}님 ${r.n} 뺏어먹는 중 ㅋㅋ 내 타이머 ${S.dur}분 시작!`);
 }
 function say(t){
   t=(t||'').trim().slice(0,20);if(!t)return;
