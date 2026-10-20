@@ -1,0 +1,15 @@
+# Render Blueprint: 이 폴더를 그대로 정적 사이트로 올려요.
+services:
+  - type: web
+    name: barista-cafe
+    runtime: static
+    buildCommand: ""
+    staticPublishPath: .
+    headers:
+      # 서비스 워커는 항상 새로 받아야 업데이트가 바로 반영돼요
+      - path: /sw.js
+        name: Cache-Control
+        value: no-cache
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
