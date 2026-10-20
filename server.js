@@ -104,6 +104,130 @@ function broadcast(roomName) {
 }
 const clean = (s, n) => String(s || '').replace(/[^\w가-힣-]/g, '').slice(0, n);
 
+
+/* ---------- the shared café world: AI guests and the shop cat, the same for everyone in a room ---------- */
+const SEATS = 12;
+const NPC_POOL = [
+  { name: '단골 하은', look: { h: 1, hc: 1, sc: 1, pc: 1, sk: 0, ts: 2, ac: 6, ey: 0 }, d: 'vl', lines: ['오늘도 바닐라 라떼 최고', '과제 마감 3시간 전…', '여기 노래 좋다'] },
+  { name: '시험기간 대학생', look: { h: 0, hc: 0, sc: 5, pc: 2, sk: 1, ts: 1, ac: 1, ey: 1 }, d: 'ia', lines: ['밤샐 각이다', '이 단원만 끝내자…', '커피 수혈 완료'] },
+  { name: '출근길 직장인', look: { h: 0, hc: 1, sc: 0, pc: 2, sk: 0, ts: 3, ac: 0, ey: 0 }, d: 'ha', lines: ['회의 10분 전', '메일 37개…', '잠깐만 쉬자'] },
+  { name: '창가 자리 작가님', look: { h: 7, hc: 0, sc: 6, pc: 3, sk: 0, ts: 0, ac: 3, ey: 1 }, d: 'cb', lines: ['한 문장만 더', '영감이 안 와', '콘센트 명당 찾음'] },
+  { name: '강아지 산책 중인 손님', look: { h: 6, hc: 3, sc: 4, pc: 0, sk: 1, ts: 2, ac: 2, ey: 0 }, d: 'le', lines: ['댕댕이가 밖에서 기다려요', '레몬에이드 상큼해', '날씨 좋다'] },
+  { name: '처음 온 손님', look: { h: 5, hc: 2, sc: 7, pc: 1, sk: 2, ts: 0, ac: 0, ey: 0 }, d: 'ml', lines: ['여기 분위기 좋네요', '말차 진하다!', '또 와야지'] },
+  { name: '헤드폰 손님', look: { h: 0, hc: 6, sc: 2, pc: 2, sk: 0, ts: 1, ac: 4, ey: 1 }, d: 'es', lines: ['노동요 재생 중', '집중 모드 ON', '…'] },
+  { name: '뜨개질 할머니', look: { h: 3, hc: 7, sc: 3, pc: 3, sk: 1, ts: 2, ac: 1, ey: 0 }, d: 'hc', lines: ['손녀 목도리 뜨는 중', '핫초코가 달달하네', '젊은이 화이팅'] },
+  { name: '진돌이 팬', look: { h: 4, hc: 5, sc: 0, pc: 1, sk: 0, ts: 0, ac: 5, ey: 2 }, d: 'cl', lines: ['진돌이 언제 와요?', '광고 보고 왔어요', '냥냥'] },
+];
+const DRINKS = new Set(['ia', 'ha', 'cl', 'vl', 'ml', 'es', 'cb', 'le', 'hc', 'jc']);
+const CAT_LINES = ['냐옹', '츄르 줘', '골골골…', '공부해라냥', '(빤히)', '냥?', '꾹꾹이 중'];
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const worlds = new Map();
+
+function getWorld(room) {
+  if (!worlds.has(room)) {
+    const now = Date.now();
+    worlds.set(room, { npcs: [], seeded: false,
+      cat: { mode: 'sit', at: { u: 0.35, v: 0.4 }, dur: 0, until: now + 4000, say: null, likes: {}, fav: null, v: 1 } });
+  }
+  return worlds.get(room);
+}
+// the same seating rule the page uses: people first, sorted by id, then AI guests
+function humanSeats(room) {
+  const members = [...(rooms.get(room) || new Map()).entries()]
+    .filter(([, m]) => !(m.state && (m.state.st === 'making' || m.state.st === 'done')))
+    .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  const taken = {}, seatOf = {};
+  for (const [id, m] of members) {
+    let s = Number.isInteger(m.state && m.state.seat) && m.state.seat >= 0 && m.state.seat < SEATS ? m.state.seat : -1;
+    if (s < 0 || taken[s] != null) { s = -1; for (let i = 0; i < SEATS; i++) if (taken[i] == null) { s = i; break; } }
+    if (s >= 0) { taken[s] = id; seatOf[id] = s; }
+  }
+  return { taken, seatOf, count: (rooms.get(room) || new Map()).size };
+}
+function npcSay(n, t) { n.say = { t: String(t || pick(n.lines)).slice(0, 20), at: Date.now() }; }
+function spawnNpc(w, name, d) {
+  const here = (nm) => w.npcs.some((x) => x.name === nm);
+  let p = name ? NPC_POOL.find((x) => x.name === name) : null;
+  if (p && here(p.name)) { const n = w.npcs.find((x) => x.name === p.name); n.d = DRINKS.has(d) ? d : n.d; n.left = 1; n.st = 'hold'; n.leaveAt = 0; npcSay(n, '잘 마실게요!'); return; }
+  if (!p) { const free = NPC_POOL.filter((x) => !here(x.name)); if (!free.length) return; p = pick(free); }
+  const n = { name: p.name, look: p.look, lines: p.lines, d: DRINKS.has(d) ? d : p.d, key: 'npc:' + p.name, left: 1, st: 'hold',
+    seat: null, drain: 1 / (240 + Math.random() * 300), say: null, leaveAt: 0 };
+  npcSay(n, '안녕하세요~');
+  w.npcs.push(n);
+}
+function catWalk(cat, to, now) { cat.mode = 'walk'; cat.at = to; cat.dur = 2.5 + Math.random() * 3; cat.until = now + cat.dur * 1000; cat.v++; }
+function catRest(cat, kind, ms, now) { cat.mode = kind; cat.dur = 0; cat.until = now + ms; cat.v++; if (kind === 'sleep') cat.say = { t: 'Zzz…', at: now }; }
+
+function tickWorld(room) {
+  const w = getWorld(room), now = Date.now(), { taken, seatOf, count } = humanSeats(room);
+  if (!w.seeded) { w.seeded = true; for (let i = 0; i < 3; i++) spawnNpc(w); w.npcs.forEach((n) => { n.left = 0.45 + Math.random() * 0.55; n.say = null; }); }
+  // seats: people always win; a guest in the way moves somewhere free (or leaves)
+  for (const n of w.npcs) {
+    if (n.leaveAt && n.st === 'finished' && n.seat == null) continue;
+    const clash = n.seat == null || taken[n.seat] != null || w.npcs.some((o) => o !== n && o.seat === n.seat);
+    if (!clash) continue;
+    const used = new Set([...Object.keys(taken).map(Number), ...w.npcs.filter((o) => o !== n && o.seat != null).map((o) => o.seat)]);
+    const free = []; for (let i = 0; i < SEATS; i++) if (!used.has(i)) free.push(i);
+    const had = n.seat != null;
+    if (free.length) { n.seat = pick(free); if (had) npcSay(n, '자리 비켜드릴게요'); } else { n.seat = null; n.leaveAt = now; }
+  }
+  for (const n of w.npcs) {
+    if (n.st === 'hold') { n.left = Math.max(0.1, n.left - n.drain * 2); if (n.left <= 0.1) { n.st = 'finished'; n.leaveAt = now + 25000; npcSay(n, '잘 마셨어요!'); } }
+    if ((!n.say || now - n.say.at > 12000) && Math.random() < 0.03) npcSay(n);
+  }
+  w.npcs = w.npcs.filter((n) => !(n.leaveAt && now > n.leaveAt));
+  const target = Math.max(0, Math.min(4, SEATS - count - 3));
+  if (w.npcs.length < target && Math.random() < 0.12) spawnNpc(w);
+  if (w.npcs.length > target + 1) { const n = w.npcs.find((x) => x.st !== 'finished'); if (n) { n.st = 'finished'; n.leaveAt = now + 6000; npcSay(n, '자리 비켜드릴게요'); } }
+  // the cat
+  const cat = w.cat;
+  if (now >= cat.until) {
+    const favSeat = cat.fav != null ? seatOf[cat.fav] : undefined;
+    if (cat.mode === 'walk') {
+      const nearFav = cat.at && cat.at.seat != null && cat.at.seat === favSeat;
+      if (nearFav) { catRest(cat, 'sit', 15000 + Math.random() * 15000, now); cat.say = { t: '골골골…', at: now }; }
+      else catRest(cat, Math.random() < 0.25 ? 'sleep' : 'sit', 6000 + Math.random() * 9000, now);
+    } else {
+      const r = Math.random();
+      if (favSeat != null && r < 0.55) catWalk(cat, { seat: favSeat }, now);
+      else if (r < 0.12) catRest(cat, 'sleep', 15000 + Math.random() * 20000, now);
+      else catWalk(cat, { u: Math.random(), v: Math.random() }, now);
+    }
+  }
+  broadcastWorld(room);
+}
+function worldMsg(room) {
+  const w = getWorld(room), now = Date.now(), c = w.cat;
+  return JSON.stringify({ t: 'world',
+    npcs: w.npcs.filter((n) => n.seat != null).map((n) => ({ key: n.key, name: n.name, look: n.look, d: n.d, left: Math.round(n.left * 100) / 100, st: n.st, seat: n.seat, say: n.say })),
+    cat: { mode: c.mode, at: c.at, rem: Math.max(0, c.until - now), dur: c.dur, v: c.v, say: c.say, fav: c.fav, likes: c.likes } });
+}
+function broadcastWorld(room) {
+  const r = rooms.get(room); if (!r) return;
+  const msg = worldMsg(room);
+  for (const m of r.values()) m.conn.send(msg);
+}
+function handleAct(room, id, m) {
+  const w = getWorld(room), now = Date.now();
+  if (m.a === 'pet') {
+    const c = w.cat; c.likes[id] = (c.likes[id] || 0) + 1;
+    if (c.mode === 'sleep') { catRest(c, 'sit', 5000, now); c.say = { t: '…냥? (깼다)', at: now }; }
+    else c.say = { t: pick(CAT_LINES), at: now };
+    if (c.likes[id] >= 5 && c.fav !== id && c.likes[id] > (c.likes[c.fav] || 0)) {
+      c.fav = id; c.say = { t: '{fav} 옆이 제일 좋다냥', at: now };
+      const s = humanSeats(room).seatOf[id]; if (s != null) catWalk(c, { seat: s }, now);
+    }
+    c.v++;
+  } else if (m.a === 'npcSay' || m.a === 'refill') {
+    const n = w.npcs.find((x) => x.key === m.key); if (!n) return;
+    if (m.a === 'refill') { n.left = 1; n.st = 'hold'; n.leaveAt = 0; npcSay(n, '감사해요! 여기 팁'); } else npcSay(n);
+  } else if (m.a === 'guest') {
+    spawnNpc(w, String(m.name || '').slice(0, 20), String(m.d || ''));
+  } else return;
+  broadcastWorld(room);
+}
+setInterval(() => { for (const room of rooms.keys()) tickWorld(room); }, 2000);
+
 server.on('upgrade', (req, socket) => {
   let pathname = '';
   try { pathname = new URL(req.url, 'http://x').pathname; } catch (e) {}
@@ -128,6 +252,9 @@ server.on('upgrade', (req, socket) => {
       // the new window takes the seat first, then the older one is told to stop
       if (prev && prev.conn !== conn) { prev.conn.send(JSON.stringify({ t: 'replaced' })); prev.conn.close(); }
       broadcast(room);
+      if (!getWorld(room).seeded) tickWorld(room); else conn.send(worldMsg(room));
+    } else if (m.t === 'act' && me) {
+      handleAct(me.room, me.id, m);
     } else if (m.t === 'state' && me) {
       const entry = rooms.get(me.room) && rooms.get(me.room).get(me.id);
       if (entry && m.state && typeof m.state === 'object') { entry.state = m.state; broadcast(me.room); }

@@ -53,7 +53,12 @@
       onConnection(fn) { setTimeout(() => fn(connected), 0); return () => {}; },
       emit: () => Promise.resolve(),
       on: () => () => {},
+      // shared world (AI guests, cat) — only when our own server is connected
+      onWorld(fn) { worldFns.add(fn); if (lastWorld) setTimeout(() => fn(lastWorld), 0); return () => worldFns.delete(fn); },
+      act(msg) { return transport.act ? transport.act(msg) : false; },
     };
+    let lastWorld = null; const worldFns = new Set();
+    api._world = (w) => { lastWorld = w; for (const fn of worldFns) { try { fn(w); } catch (e) { console.error(e); } } };
     // called by the transport
     api._set = (all) => {
       const joined = [], updated = [], left = [];
@@ -147,6 +152,7 @@
     const url = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
     const t = {
       send(state) { mine = { ...state }; if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'state', state: mine })); },
+      act(msg) { if (ws && ws.readyState === 1) { ws.send(JSON.stringify({ ...msg, t: 'act' })); return true; } return false; },
       start(r, onOpen, onFail) {
         room = r;
         const connect = () => {
@@ -161,6 +167,7 @@
           ws.onmessage = (ev) => {
             let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
             if (m.t === 'peers') room._set(m.all || {});
+            if (m.t === 'world') room._world(m);
             if (m.t === 'replaced') { stopped = true; room._set({}); showRetired(); }
           };
           ws.onclose = () => {
