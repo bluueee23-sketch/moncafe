@@ -46,7 +46,7 @@ img{max-width:100%}
 .btn.ask{background:#FFF3DF;color:#5A3A1C;box-shadow:0 3px 0 #C99A5B;display:flex;flex-direction:column;align-items:flex-start;line-height:1.15;padding:8px 14px}
 .btn.ask small{font-family:var(--body);font-size:11px;opacity:.75;margin-top:2px}
 .btn.ask:disabled{opacity:.6;cursor:progress}
-@media (min-width:820px){#scrMenu .bhbtns .btn{font-size:13.5px;padding:7px 11px}}
+@media (min-width:820px) and (min-aspect-ratio:4/5){#scrMenu .bhbtns .btn{font-size:13.5px;padding:7px 11px}}
 
 .hname.human .ftime{color:#D9F7E6;font-weight:800;opacity:1}
 .hname.human.me .ftime{color:#FFFFFF}
@@ -592,7 +592,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
 /* ===== desktop: hall fills the left, current screen on the right ===== */
 .hsit{opacity:.55}
 .hsit:hover,.hsit:focus-visible{opacity:1}
-@media (min-width:820px){
+@media (min-width:820px) and (min-aspect-ratio:4/5){
   html,body{height:100%}
   .app{max-width:1720px;height:100%;box-sizing:border-box;padding-block:12px;display:grid;
     grid-template-columns:minmax(0,1fr) clamp(330px,34vw,470px);grid-template-rows:auto auto minmax(0,1fr) auto;column-gap:16px}
@@ -614,7 +614,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
   .friends .saybar{margin-top:10px}
 }
 
-@media (min-width:820px){.hall{aspect-ratio:auto;min-width:0}}
+@media (min-width:820px) and (min-aspect-ratio:4/5){.hall{aspect-ratio:auto;min-width:0}}
 .mcard .nm{font-size:16px;word-break:keep-all;overflow-wrap:anywhere;max-width:none;white-space:normal;overflow:visible;font-weight:400}
 
 .hsit{display:none}
@@ -627,7 +627,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
 @media (max-width:500px){.chalk small{display:none}}
 
 /* ===== desktop right column: a compact coffee station ===== */
-@media (min-width:820px){
+@media (min-width:820px) and (min-aspect-ratio:4/5){
   .app > #scrBar{overflow:hidden;display:flex;flex-direction:column}
   #scrBar .bar{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0}
   #scrBar .ticket{padding:10px 14px 12px}
@@ -648,14 +648,14 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
   #scrBar .ing .sw{width:20px;height:20px}
 }
 
-@media (min-width:820px){
+@media (min-width:820px) and (min-aspect-ratio:4/5){
   #scrBar .ticket,#scrBar .counter{width:100%;box-sizing:border-box;align-self:stretch}
   #scrBar .stage > *{min-width:0}
   #scrBar .say-box{width:auto;box-sizing:border-box}
 }
 
 /* ===== two-column: compact chrome so everything fits one screen ===== */
-@media (min-width:820px){
+@media (min-width:820px) and (min-aspect-ratio:4/5){
   .app{padding-block:8px;column-gap:12px}
   .awning{height:18px}
   .awning::after{height:8px;background-size:64px 8px}
@@ -685,7 +685,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
   #scrBar .stage{padding:10px}
 }
 [hidden]{display:none!important}
-@media (min-width:820px) and (max-width:1099px){
+@media (min-width:820px) and (max-width:1099px) and (min-aspect-ratio:4/5){
   #scrBar .ticket .who,#scrBar .ticket .say{display:none}
   #scrBar .tname{font-size:18px;margin:2px 0 6px}
   #scrBar .steps li{font-size:11.5px;padding:3px 6px}
@@ -719,7 +719,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
 .mmprev svg{width:84px;height:120px}
 .friends .fempty{margin:8px 12px 0}
 @media (max-width:520px){.mm .mmbody{flex-wrap:wrap;right:-8px}.mmprev{margin:0 auto}}
-@media (min-width:820px){
+@media (min-width:820px) and (min-aspect-ratio:4/5){
   .hallwrap{flex:1}
   .friends .saybar{position:absolute;left:10px;right:10px;bottom:10px;margin:0;z-index:4;flex-wrap:nowrap;
     background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(6px);border-radius:99px;padding:5px 6px 5px 6px;box-shadow:0 4px 16px rgba(40,30,20,.14)}
@@ -729,10 +729,10 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
     border-radius:10px;padding:5px 10px;font-size:12px;box-shadow:0 2px 8px rgba(40,30,20,.1)}
   .friends .fsel{position:absolute;left:50%;transform:translateX(-50%);bottom:58px;margin:0;z-index:5;box-shadow:0 6px 18px rgba(40,30,20,.18);background:var(--surface)}
 }
-@media (min-width:820px) and (max-width:1199px){.friends .saybar .facts .mini:nth-child(n+3){display:none}}
+@media (min-width:820px) and (max-width:1199px) and (min-aspect-ratio:4/5){.friends .saybar .facts .mini:nth-child(n+3){display:none}}
 
 /* ===== desktop right column: compact study seat ===== */
-@media (min-width:820px){
+@media (min-width:820px) and (min-aspect-ratio:4/5){
   #scrStudy .study{display:flex;flex-direction:column;gap:10px;height:100%}
   #scrStudy .seat{flex:1 1 auto;min-height:92px}
   #scrStudy .timerbox{flex:none}
@@ -843,7 +843,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
 @media (prefers-reduced-motion:reduce){.jindol{transition:none!important}}
 
 /* 완성 화면: 웹에서 스크롤 없이 한 번에 */
-@media (min-width:820px){
+@media (min-width:820px) and (min-aspect-ratio:4/5){
   .app > #scrDone{overflow:hidden;display:flex;flex-direction:column}
   .app > #scrDone[hidden]{display:none}
   .app > #scrDone{container-type:size}
@@ -884,7 +884,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
 }
 
 /* 오늘의 메뉴: 웹에서 스크롤 없이, 남는 칸 없이 꽉 차게 */
-@media (min-width:820px){
+@media (min-width:820px) and (min-aspect-ratio:4/5){
   .app > #scrMenu{overflow:hidden;display:flex;flex-direction:column;padding-right:0}
   #scrMenu .board{flex:1;min-height:0;display:flex;flex-direction:column}
   #scrMenu .board-head{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px 12px;margin-bottom:10px}
@@ -919,7 +919,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
   @container (max-height:80px){#scrMenu .mcard svg{display:none}}
 }
 /* 폰: 9잔을 3칸씩 3줄, 빈 칸 없이 */
-@media (max-width:819px){
+@media (max-width:819px), (max-aspect-ratio:799/1000){
   #scrMenu .menu{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
   #scrMenu .mcard{padding:8px 4px 10px}
   #scrMenu .mcard svg{width:min(70px,100%);height:auto;aspect-ratio:200/250}
@@ -927,7 +927,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
   #scrMenu .mcard .pr{font-size:10.5px;white-space:nowrap}
 }
 @media (max-width:359px){#scrMenu .mcard .pr{display:none}}
-@media (max-width:819px){#scrMenu .bhbtns{display:grid;grid-template-columns:1fr 1fr;width:100%;gap:8px}#scrMenu .bhbtns .btn{width:100%;min-width:0;justify-content:center}#scrMenu .bhbtns .btn.ask{align-items:center;text-align:center}#scrMenu .bhbtns .btn{font-size:15px;padding:9px 8px;word-break:keep-all;line-height:1.2}#scrMenu .bhbtns .btn.ask small{word-break:keep-all}}
+@media (max-width:819px), (max-aspect-ratio:799/1000){#scrMenu .bhbtns{display:grid;grid-template-columns:1fr 1fr;width:100%;gap:8px}#scrMenu .bhbtns .btn{width:100%;min-width:0;justify-content:center}#scrMenu .bhbtns .btn.ask{align-items:center;text-align:center}#scrMenu .bhbtns .btn{font-size:15px;padding:9px 8px;word-break:keep-all;line-height:1.2}#scrMenu .bhbtns .btn.ask small{word-break:keep-all}}
 /* 스팀 온도 막대: 글 상자 폭 끝까지 */
 #meterWrap{align-self:stretch;width:100%;box-sizing:border-box}
 #meterWrap .meter{height:18px}
@@ -941,7 +941,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
 .fsel{position:relative;padding-right:38px}
 .fsel .fx{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:13px;line-height:1;display:grid;place-items:center;cursor:pointer;padding:0}
 .fsel .fx:hover{color:var(--ink);background:var(--surface-2)}
-@media (min-width:820px){.friends .fsel{position:absolute}}
+@media (min-width:820px) and (min-aspect-ratio:4/5){.friends .fsel{position:absolute}}
 /* 친밀도 하트: 이름표 오른쪽 위 모서리에 걸쳐서(줄바꿈 없이) */
 .hname{overflow:visible}
 .hname .fh{position:absolute;top:0;right:-2px;transform:translateY(-62%) rotate(6deg);margin:0;font-size:.95em;line-height:1;letter-spacing:-.08em;white-space:nowrap;pointer-events:none;
@@ -1005,8 +1005,6 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
           <button class="chalk" id="wallBoard" title="메뉴판 보기"></button>
           <button class="machine2" id="machine" aria-label="에스프레소 머신: 손님 주문 받기"><span>주문 받기</span></button>
           <button class="adwall" id="adWall" aria-label="벽 광고판"></button>
-          <button class="adpost" id="adPost" aria-label="벽 포스터 광고"></button>
-          <button class="adpop" id="adPop" aria-label="카운터 광고"></button>
           <div class="hud" id="hud"></div>
           <button class="jindol" id="jindol" aria-label="박진돌 쓰다듬기"><span class="jd-bub" id="jdBub" hidden></span><span class="jd-spr" id="jdSpr"></span></button>
         </div>
@@ -1574,12 +1572,9 @@ function adSVG(ad,kind){
 }
 function adHTML(ad,small){return adSVG(ad,small===true?'pop':small)}
 function renderAds(){
-  const w=ADS[adI%ADS.length],q=ADS[(adI+1)%ADS.length],p=ADS[(adI+2)%ADS.length];
-  const W=$('adWall'),Q=$('adPost'),P=$('adPop');
-  W.innerHTML=adSVG(w,'wall');Q.innerHTML=adSVG(q,'post');P.innerHTML=adSVG(p,'pop');
-  W.onclick=()=>openAd(w);Q.onclick=()=>openAd(q);P.onclick=()=>openAd(p);
-  Q.setAttribute('aria-label',`벽 포스터 광고: ${q.b} ${q.h}`);
-  W.setAttribute('aria-label',`벽 광고판: ${w.b} ${w.h}`);P.setAttribute('aria-label',`카운터 광고: ${p.b} ${p.h}`);
+  const w=ADS[adI%ADS.length],W=$('adWall');
+  W.innerHTML=adSVG(w,'wall');W.onclick=()=>openAd(w);
+  W.setAttribute('aria-label',`벽 광고판: ${w.b} ${w.h}`);
 }
 function openAd(ad){
   const c=$('adCard');c.hidden=false;c.textContent='';
@@ -1596,8 +1591,8 @@ function openAd(ad){
   c.append(top,x);
 }
 setTimeout(renderAds,0);
-setInterval(()=>{if(document.hidden)return;['adWall','adPost','adPop'].forEach(id=>$(id).classList.add('flip'));
-  setTimeout(()=>{adI++;renderAds();['adWall','adPost','adPop'].forEach(id=>$(id).classList.remove('flip'))},350)},15000);
+setInterval(()=>{if(document.hidden)return;$('adWall').classList.add('flip');
+  setTimeout(()=>{adI++;renderAds();$('adWall').classList.remove('flip')},350)},15000);
 
 /* ---------- sound ---------- */
 let AC=null,noise=null;
@@ -2428,7 +2423,7 @@ let TABLES=[];
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 const pct=(x,y)=>`left:${((x-VX)/VBW*100).toFixed(2)}%;top:${(y/VBH*100).toFixed(2)}%`;
 function hallStatic(){
-  const lamp=x=>`<line x1="${x}" y1="0" x2="${x}" y2="96" stroke="#2A2624" stroke-width="1.6"/><path d="M${x-21} 119 L${x-7} 96 H${x+7} L${x+21} 119 Z" fill="#E4DACA"/><path d="M${x-21} 119 L${x-7} 96 H${x-3} L${x-15} 119 Z" fill="#fff" opacity=".35"/><ellipse cx="${x}" cy="119" rx="21" ry="3.2" fill="#FFE7AE"/>`;
+  const lamp=x=>`<line x1="${x}" y1="0" x2="${x}" y2="38" stroke="#2A2624" stroke-width="1.6"/><path d="M${x-21} 61 L${x-7} 38 H${x+7} L${x+21} 61 Z" fill="#E4DACA"/><path d="M${x-21} 61 L${x-7} 38 H${x-3} L${x-15} 61 Z" fill="#fff" opacity=".35"/><ellipse cx="${x}" cy="61" rx="21" ry="3.2" fill="#FFE7AE"/>`;
   const glow=(x,y,rx,ry)=>`<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="url(#glowG)"/>`;
   const globe=(x,len)=>`<line x1="${x}" y1="0" x2="${x}" y2="${len}" stroke="#2A2624" stroke-width="1.6"/><rect x="${x-3}" y="${len-2}" width="6" height="5" fill="#B08A4A"/><circle cx="${x}" cy="${len+14}" r="14" fill="#FFF4D8"/><circle cx="${x-5}" cy="${len+9}" r="4" fill="#fff" opacity=".7"/>`;
   const leaf=([x,y,r,c])=>`<ellipse cx="${x}" cy="${y}" rx="14" ry="8" transform="rotate(${r} ${x} ${y})" fill="${c}"/>`;
@@ -2446,13 +2441,13 @@ function hallStatic(){
    `<rect x="-1500" width="4000" height="340" fill="var(--sc-wall)"/><rect x="-1500" width="4000" height="340" fill="#000" filter="url(#lime)"/>`+
    `<rect x="630" y="0" width="2000" height="340" fill="url(#brick)"/>`+
    // lightbox ad board (replaces the window)
-   `<rect x="30" y="122" width="212" height="184" rx="6" fill="#2A2624"/><rect x="36" y="128" width="200" height="172" rx="3" fill="#FFFDF7"/>`+
-   `<rect x="58" y="304" width="6" height="30" fill="#2A2624"/><rect x="208" y="304" width="6" height="30" fill="#2A2624"/>`+
+   `<rect x="16" y="70" width="284" height="246" rx="7" fill="#2A2624"/><rect x="22" y="76" width="272" height="234" rx="3" fill="#FFFDF7"/>`+
+   `<rect x="50" y="314" width="7" height="24" fill="#2A2624"/><rect x="259" y="314" width="7" height="24" fill="#2A2624"/>`+
    // fig tree
-   `<path d="M265 296 Q262 232 270 176" stroke="#6B4A2E" stroke-width="4" fill="none"/>`+leaves.map(leaf).join('')+
-   `<path d="M244 292 h42 l-6 46 h-30 Z" fill="#C2704A"/><rect x="242" y="288" width="46" height="7" rx="2" fill="#B0603E"/>`+
+   `<g transform="translate(338 0)"><path d="M265 296 Q262 232 270 176" stroke="#6B4A2E" stroke-width="4" fill="none"/>`+leaves.map(leaf).join('')+
+   `<path d="M244 292 h42 l-6 46 h-30 Z" fill="#C2704A"/><rect x="242" y="288" width="46" height="7" rx="2" fill="#B0603E"/></g>`+
    // banquette + chalkboard
-   `<rect x="316" y="122" width="214" height="118" rx="5" fill="#9A6A3F"/><rect x="324" y="130" width="198" height="102" fill="#26332D"/><rect x="330" y="226" width="40" height="4" rx="1" fill="#E9E5DA" opacity=".8"/>`+
+   `<rect x="306" y="92" width="272" height="148" rx="6" fill="#9A6A3F"/><rect x="314" y="100" width="256" height="132" fill="#26332D"/><rect x="322" y="226" width="44" height="4" rx="1" fill="#E9E5DA" opacity=".8"/>`+
    `<rect x="300" y="246" width="272" height="56" rx="10" fill="#D6A23A"/>${[345,390,435,480,525].map(x=>`<path d="M${x} 252 V296" stroke="#B88628" stroke-width="2"/>`).join('')}`+
    `<rect x="318" y="262" width="36" height="30" rx="8" fill="#EFE6D6"/><rect x="520" y="264" width="34" height="28" rx="8" fill="#8FA88A"/>`+
    `<rect x="296" y="298" width="280" height="22" rx="7" fill="#C9952F"/><rect x="302" y="318" width="268" height="20" fill="#8E6A2A"/>`+
@@ -2470,9 +2465,8 @@ function hallStatic(){
    `<g transform="translate(-390 0)"><rect x="-46" y="120" width="92" height="120" fill="#F7F1E6" stroke="#9A6A3F" stroke-width="5"/><circle cx="0" cy="168" r="26" fill="#E2A15B"/><path d="M-30 222 H30" stroke="#2F5D4C" stroke-width="5"/><text x="0" y="214" text-anchor="middle" font-size="12" fill="#2F5D4C" font-family="monospace">COFFEE</text></g>`+
    `<g transform="translate(1170 0)"><rect x="-60" y="96" width="120" height="7" fill="#B37D4E"/><path d="M-40 96 h20 l-3 -20 h-14 Z" fill="#EDE6DA"/><path d="M-30 76 C-40 62 -46 54 -42 46 C-34 52 -30 64 -30 76 C-27 62 -21 52 -13 50 C-13 60 -21 70 -30 76" fill="#5A9A62"/><rect x="6" y="66" width="34" height="30" rx="3" fill="#C98A45"/><rect x="10" y="72" width="26" height="12" fill="#F3EFE8"/></g>`+
    `<g transform="translate(1390 0)"><line x1="0" y1="0" x2="0" y2="110" stroke="#2A2624" stroke-width="1.6"/><path d="M-21 133 L-7 110 H7 L21 133 Z" fill="#E4DACA"/><ellipse cx="0" cy="133" rx="21" ry="3.2" fill="#FFE7AE"/></g>`+
-   `<rect x="538" y="124" width="86" height="144" rx="3" fill="#8A5A33"/><rect x="542" y="128" width="78" height="136" fill="#F7F1E6"/>`+
-   // lamps + glow
-   `<g style="opacity:var(--lampglow)">${glow(150,170,110,70)}${glow(380,170,110,70)}${glow(610,170,110,70)}${glow(760,170,80,60)}${glow(920,170,80,60)}</g>`+
+      // lamps + glow
+   `<g style="opacity:var(--lampglow)">${glow(150,110,110,70)}${glow(380,110,110,70)}${glow(610,110,110,70)}${glow(760,170,80,60)}${glow(920,170,80,60)}</g>`+
    lamp(150)+lamp(380)+lamp(610)+globe(760,138)+globe(920,122)+
    // floor
    `<rect x="-1500" y="338" width="4000" height="2000" fill="var(--sc-floor)"/><rect x="-1500" y="338" width="4000" height="2000" fill="url(#terr)" style="opacity:var(--terr)"/>`+
@@ -2661,13 +2655,15 @@ setInterval(()=>{if(!document.hidden)renderFriends()},1000);
 })();
 
 renderMenu();renderFriends();
-const TWO=()=>matchMedia('(min-width:820px)').matches;
+const WIDE='(min-width:820px) and (min-aspect-ratio:4/5)',TWO=()=>matchMedia(WIDE).matches;
 function layoutHall(w,h){
   // pick the fewest rows that fit all tables, so the room is as large as the box allows
   const NT=SEATS/2;let best=null;
+  // 넓은 화면에서는 채팅 입력줄이 매장 아래에 떠 있어요. 그 높이만큼 비워 두고 테이블을 배치해요(맨 아랫줄이 안 가려지게)
+  let he=h;if(TWO()&&h){const sb=document.querySelector('.friends .saybar');he=Math.max(h*.6,h-((sb&&sb.offsetHeight)||44)-18)}
   for(let rows=1;rows<=6;rows++){
-    const vbh0=600+262*(rows-1)+(TWO()?54:0),vbw=Math.max(1000,w&&h?vbh0*w/h:1000),vbh=Math.max(vbh0,vbw*(h/w||0)),n=Math.floor((vbw-60)/(230*TS));
-    if(n*rows>=NT){best={rows,vbw,vbh,n};break}
+    const vbh0=600+262*(rows-1),vbw=Math.max(1000,w&&he?vbh0*w/he:1000),vbh=Math.max(vbh0,vbw*(he/w||0)),n=Math.floor((vbw-60)/(230*TS));
+    if(n*rows>=NT){best={rows,vbw,vbh:h&&he?vbh*h/he:vbh,n};break}
   }
   VBW=best.vbw;VBH=best.vbh;VX=-(VBW-1000)/2;
   TABLES=[];let left=NT;
@@ -2676,15 +2672,13 @@ function layoutHall(w,h){
 }
 function fitHall(){
   const bx=$('hallScroll'),hall=$('hall');
-  if(matchMedia('(min-width:820px)').matches){const w=bx.clientWidth,h=bx.clientHeight;if(!w||!h)return;
+  if(TWO()){const w=bx.clientWidth,h=bx.clientHeight;if(!w||!h)return;
     hall.style.width=w+'px';hall.style.height=h+'px';hall.style.aspectRatio='';layoutHall(w,h)}
   else{hall.style.width='';hall.style.height='';layoutHall(0,0);hall.style.aspectRatio=`1000/${VBH}`}
   $('hallSvg').setAttribute('viewBox',`${VX.toFixed(1)} 0 ${VBW.toFixed(1)} ${VBH.toFixed(1)}`);
-  $('wallBoard').style.cssText=box(324,130,198,102);
+  $('wallBoard').style.cssText=box(314,100,256,132);
   $('machine').style.cssText=box(866,220,106,58);
-  $('adWall').style.cssText=box(36,128,200,172);
-  $('adPost').style.cssText=box(542,128,78,136);
-  $('adPop').style.cssText=box(644,234,40,42);
+  $('adWall').style.cssText=box(22,76,272,234);
   lastSig='';renderFriends();
   if(typeof jdPlace==='function'){JDC.x=Math.min(Math.max(JDC.x,VX+40),VX+VBW-40);JDC.y=Math.min(JDC.y,VBH-60);jdPlace(false)}
 }
