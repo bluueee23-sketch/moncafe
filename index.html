@@ -3114,7 +3114,7 @@ if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.
   let base=null,pending=false;
   const ver=()=>fetch('sw.js?v='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/VERSION\s*=\s*'([^']+)'/);return m?m[1]:null}).catch(()=>null);
   const busy=()=>{try{if(CUR==='scrBar')return true}catch(e){}const a=document.activeElement;return !!(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA')&&a.value)};
-  const tryReload=()=>{if(!pending)return;if(busy())return;try{if(typeof saveStudy==='function')saveStudy()}catch(e){}location.reload()};
+  const tryReload=()=>{if(!pending)return;if(busy())return;if(document.getElementById('cafe-retired'))return;try{if(typeof saveStudy==='function')saveStudy()}catch(e){}location.reload()};
   const check=()=>ver().then(v=>{if(!v)return;if(base===null){base=v;return}if(v!==base){pending=true;tryReload()}});
   check();
   setInterval(()=>{pending?tryReload():check()},90*1000);

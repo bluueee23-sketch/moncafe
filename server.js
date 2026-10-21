@@ -437,6 +437,14 @@ server.on('upgrade', (req, socket) => {
       rooms.get(room).set(id, { conn, state: m.state && typeof m.state === 'object' ? m.state : {} });
       // the new window takes the seat first, then the older one is told to stop
       if (prev && prev.conn !== conn) { prev.conn.send(JSON.stringify({ t: 'replaced' })); prev.conn.close(); }
+      // 한 사람은 한 매장에만 있어요: 다른 매장에 남아 있던 예전 창은 그 매장에서 빼요
+      for (const [rk, rm] of rooms) {
+        if (rk === room || !rm.has(id)) continue;
+        const old = rm.get(id); rm.delete(id);
+        const meta = metas.get(room);
+        try { old.conn.send(JSON.stringify({ t: 'replaced', to: room, title: room === 'main' ? '공개 매장' : (meta && meta.title) || '' })); old.conn.close(); } catch (e) {}
+        if (!rm.size) rooms.delete(rk); else broadcast(rk);
+      }
       broadcast(room);
       if (!getWorld(room).seeded) tickWorld(room); else conn.send(worldMsg(room));
       conn.send(JSON.stringify({ t: 'chatlog', list: chats.get(room) || [] }));

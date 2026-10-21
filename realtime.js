@@ -142,15 +142,22 @@
     };
   }
 
-  function showRetired() {
-    if (document.getElementById('cafe-retired')) return;
+  function showRetired(m) {
+    m = m || {};
+    const moved = m.to && m.to !== (window.CAFE_ROOM || 'main');
+    const old = document.getElementById('cafe-retired'); if (old) old.remove();
     const d = document.createElement('div'); d.id = 'cafe-retired';
     d.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:99;background:#2A211B;color:#FBF8F2;padding:10px 14px;border-radius:12px;font:14px system-ui,sans-serif;display:flex;gap:10px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:calc(100% - 32px)';
-    const t = document.createElement('span'); t.textContent = '다른 창에서 카페를 열어서 이 창은 매장 연결을 멈췄어요.';
-    const b = document.createElement('button'); b.textContent = '이 창으로 다시 연결';
-    b.style.cssText = 'border:0;border-radius:99px;padding:5px 12px;background:#86C9AC;color:#10201A;font:inherit;cursor:pointer;white-space:nowrap';
-    b.onclick = () => location.reload();
-    d.append(t, b); document.body.appendChild(d);
+    const t = document.createElement('span');
+    t.textContent = moved ? `다른 창에서 ${m.title ? '"' + m.title + '"' : '다른 매장'}에 출근해서, 이 창은 매장에서 퇴근했어요.` : '다른 창에서 카페를 열어서 이 창은 매장 연결을 멈췄어요.';
+    const btn = (label, fn, main) => { const b = document.createElement('button'); b.textContent = label; b.onclick = fn;
+      b.style.cssText = 'border:0;border-radius:99px;padding:5px 12px;font:inherit;cursor:pointer;white-space:nowrap;' + (main ? 'background:#86C9AC;color:#10201A' : 'background:transparent;color:#FBF8F2;border:1px solid rgba(251,248,242,.4)');
+      return b; };
+    d.append(t);
+    if (moved) d.append(btn('그 매장으로 가기', () => { location.href = m.to === 'main' ? location.pathname : '?room=' + encodeURIComponent(m.to); }, true), btn('여기로 다시 출근', () => location.reload()));
+    else d.append(btn('이 창으로 다시 연결', () => location.reload(), true));
+    d.style.flexWrap = 'wrap';
+    document.body.appendChild(d);
   }
 
   /* ---------- transport 3: our own server.js on Render (/ws) ---------- */
@@ -177,7 +184,7 @@
             if (m.t === 'world') room._world(m);
             if (m.t === 'chat' || m.t === 'chatlog') room._chat(m);
             if (m.t === 'meta' || m.t === 'roster') room._store(m);
-            if (m.t === 'replaced') { stopped = true; room._set({}); showRetired(); }
+            if (m.t === 'replaced') { stopped = true; room._set({}); showRetired(m); }
           };
           ws.onclose = () => {
             clearTimeout(giveUp); room._connected(false);
