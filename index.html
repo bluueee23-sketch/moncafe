@@ -63,6 +63,7 @@ img{max-width:100%}
 .cp-ln.mine b{color:var(--mine,#C2577A)}
 .cp-ln.mine span{background:var(--mine,#C2577A)}
 #chatBtn[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+#clock.brk{color:var(--mine,#C2577A)}
 </style>
 <script src="config.js"></script>
 <script src="realtime.js"></script>
@@ -1213,6 +1214,11 @@ function openStudy(join){
   if(typeof spriteSVG==='function')$('meStudy').innerHTML=personSVG(lookOut(),{pose:'sit',face:'focus'});
   renderChips();renderStudy();show('scrStudy');
 }
+function breakOver(){
+  S.brk=0;clearInterval(sT);chime();
+  const l=$('brkLine');if(l)l.textContent='쉬는 시간 끝! 다음 잔 만들러 갈까요?';
+  toast('5분 쉬는 시간 끝! 다음 잔 만들러 가요.');syncPresence();
+}
 function renderChips(){
   $('chips').innerHTML=PRESETS.map(m=>`<button class="chip" data-m="${m}" aria-pressed="${S.dur===m}" ${S.running||S.elapsed>0?'disabled':''}>${m}분</button>`).join('');
   $('chips').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{S.dur=+c.dataset.m;renderChips();renderStudy()});
@@ -1226,12 +1232,16 @@ function saveStudy(){try{
 }catch(e){}}
 function renderStudy(){
   const tot=S.dur*60,e=Math.min(tot,elapsed()),p=e/tot,rem=Math.ceil(tot-e);
-  $('clock').textContent=String(Math.floor(rem/60)).padStart(2,'0')+':'+String(rem%60).padStart(2,'0');
-  $('prog').style.width=(p*100)+'%';
+  const br=S.done&&S.brk?Math.max(0,Math.ceil((S.brk-Date.now())/1000)):-1;
+  if(br===0)breakOver();
+  const shown=br>0?br:rem;
+  $('clock').textContent=String(Math.floor(shown/60)).padStart(2,'0')+':'+String(shown%60).padStart(2,'0');
+  $('clock').classList.toggle('brk',br>0);
+  $('prog').style.width=(br>0?(1-br/300)*100:p*100)+'%';
   $('cupStudy').innerHTML=cupSVG(MADE.kind,MADE.L,{ice:MADE.ice,iceScale:1-.55*p,f:1-.9*p,straw:1,steam:MADE.kind==='mug'&&p<.6});
   const left=Math.round((1-.9*p)*100);
-  $('sSip').textContent=!S.running&&e===0?'갓 만든 한 잔. 타이머를 켜면 홀짝 시작.':p>=1?'다 마셨다!':`남은 양 약 ${left}% ${MADE.r.ice&&p>.4?'· 얼음이 녹는 중':''}`;
-  $('sGo').textContent=S.running?'잠깐 멈춤':e>0?'이어서 공부':'공부 시작';
+  $('sSip').textContent=!S.running&&e===0?'갓 만든 한 잔. 타이머를 켜면 홀짝 시작.':p>=1?(br>0?'쉬는 시간 · 물 한 모금, 기지개 쭉':'다 마셨다!'):`남은 양 약 ${left}% ${MADE.r.ice&&p>.4?'· 얼음이 녹는 중':''}`;
+  $('sGo').textContent=S.running?'잠깐 멈춤':e>0?'이어서 공부':'공부 시작';$('sGo').hidden=!!S.done;
   if(p>=1&&!S.done)complete();
   else if(S.running)checkGuest();
   if(Date.now()-lastSS>4000){lastSS=Date.now();saveStudy()}
@@ -1252,12 +1262,13 @@ $('sStop').onclick=()=>{
 function releaseWake(){try{wake&&wake.release()}catch(e){}wake=null}
 function logFocus(m){const d=day();d.focus+=m;const c=d.cups[MADE.idx];if(c)c.min=(c.min||0)+m;save();renderLedger()}
 function complete(){
-  S.done=true;S.running=false;clearInterval(sT);releaseWake();logFocus(S.dur);ding();MADE.left=.1;saveCup();
+  S.elapsed=S.dur*60;S.done=true;S.running=false;clearInterval(sT);releaseWake();logFocus(S.dur);ding();MADE.left=.1;saveCup();
   nextGuestAt=0;guestLeft=null;if(SERVE){clearTimeout(serveT);finishServe()}
   $('sNote').hidden=true;const d=$('sDone');d.hidden=false;
-  d.innerHTML=`<h3>한 잔 다 마셨다! ${S.dur}분 집중 완료</h3><p>오늘 총 ${day().focus}분 공부했어요. 5분 쉬면서 다음 메뉴 골라볼까요?</p><div class="acts"><button class="btn" id="fMore">다음 잔 만들러 가기</button><button class="btn ghost" id="fRefill">같은 잔 리필</button></div>`;
-  $('fMore').onclick=()=>{stopNoise();show('scrMenu');renderMenu()};
-  $('fRefill').onclick=()=>{S={dur:S.dur,elapsed:0,start:0,running:false,done:false};MADE.left=1;saveCup();$('sDone').hidden=true;$('sNote').hidden=false;renderChips();renderStudy()};
+  S.brk=Date.now()+300000;clearInterval(sT);sT=setInterval(renderStudy,500);
+  d.innerHTML=`<h3>한 잔 다 마셨다! ${S.dur}분 집중 완료</h3><p id="brkLine">오늘 총 ${day().focus}분 공부했어요. 지금부터 5분 쉬는 시간이에요. 스트레칭 한 번!</p><div class="acts"><button class="btn" id="fMore">다음 잔 만들러 가기</button><button class="btn ghost" id="fRefill">같은 잔 리필</button></div>`;
+  $('fMore').onclick=()=>{S.brk=0;clearInterval(sT);stopNoise();show('scrMenu');renderMenu()};
+  $('fRefill').onclick=()=>{clearInterval(sT);S={dur:S.dur,elapsed:0,start:0,running:false,done:false};MADE.left=1;saveCup();$('sDone').hidden=true;$('sNote').hidden=false;renderChips();renderStudy()};
   renderChips();renderStudy();syncPresence();saveStudy();
 }
 
@@ -1434,13 +1445,13 @@ function presenceState(){
   else if(CUR==='scrStudy'&&SERVE){o.st='making';o.d=SERVE.r.id}
   else if(CUR==='scrStudy'&&MADE){
     const rem=Math.max(0,Math.round(S.dur*60-elapsed()));o.d=MADE.r.id;o.dur=S.dur;
-    if(S.done)o.st='finished';else if(S.running){o.st='study';o.end=Date.now()+rem*1000}else{o.st='seat';o.rem=rem}
+    if(S.done&&S.brk>Date.now()){o.st='break';o.end=S.brk;o.dur=5}else if(S.done)o.st='finished';else if(S.running){o.st='study';o.end=Date.now()+rem*1000}else{o.st='seat';o.rem=rem}
   }
   return o;
 }
 function syncPresence(){if(ROOM&&!roomDead)ROOM.presence(presenceState()).catch(()=>{});renderFriends()}
 function sendCheer(to,k,extra){if(!ROOM)return;ROOM.presence({cheer:Object.assign({to,k,at:Date.now()},extra||{})}).catch(()=>{})}
-function remOf(p){const pr=p.presence||{};if(pr.st==='study'&&typeof pr.end==='number')return Math.max(0,Math.round((pr.end-Date.now())/1000));if(typeof pr.rem==='number')return pr.rem;return null}
+function remOf(p){const pr=p.presence||{};if((pr.st==='study'||pr.st==='break')&&typeof pr.end==='number')return Math.max(0,Math.round((pr.end-Date.now())/1000));if(typeof pr.rem==='number')return pr.rem;return null}
 const mmss=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
 function statusOf(p){
   const pr=p.presence||{},r=byId(pr.d),dn=r?r.n:'';
@@ -1457,7 +1468,7 @@ function friendCup(p){
   const pr=p.presence||{},r=byId(pr.d);if(!r)return cupSVG('icecup',[],{});
   const i=ideal(r);let f=1;
   if(pr.st==='study'||pr.st==='seat'){const s=remOf(p);if(s!=null&&pr.dur)f=1-.9*(1-s/(pr.dur*60))}
-  if(pr.st==='finished')f=.1;
+  if(pr.st==='finished'||pr.st==='break')f=.1;
   return cupSVG(i.kind,i.L,{ice:i.ice,f,iceScale:f,straw:r.ice});
 }
 function handleCheers(list){
@@ -1987,6 +1998,7 @@ function autoBubble(pr,rem){
     case 'study':{const p=progOf(pr,rem);return p<.75?`${dn} 마시는 중!`:p<.97?'거의 다 마심!':'다 마심!'}
     case 'seat':return `${dn} 들고 잠깐 쉬는 중`;
     case 'finished':return '다 마심!';
+    case 'break':return '다 마시고 5분 쉬는 중';
     case 'hold':{const l=typeof pr.left==='number'?pr.left:1;return l>=.35?`${dn} 마시는 중!`:l>.12?'거의 다 마심!':'다 마심!'}
     default:return '메뉴 고르는 중…';
   }
@@ -1998,6 +2010,7 @@ function shortBubble(pr,rem){
     case 'study':{const p=progOf(pr,rem);return p<.75?'마시는 중!':p<.97?'거의 다 마심!':'다 마심!'}
     case 'seat':return '쉬는 중';
     case 'finished':return '다 마심!';
+    case 'break':return '쉬는 중';
     case 'hold':{const l=typeof pr.left==='number'?pr.left:1;return l>=.35?'마시는 중!':l>.12?'거의 다 마심!':'다 마심!'}
     default:return '메뉴 고민…';
   }
@@ -2038,7 +2051,7 @@ async function renderFriends(){
       const pf=e.by?prof[e.by]:null;
       e.name=(typeof e.pr.nick==='string'&&e.pr.nick.trim()?e.pr.nick.trim().slice(0,12):'')||(pf&&pf.name)||(e.isMe?'나':'손님');
       e.avatar=pf&&pf.avatarUrl&&pf.name?pf.avatarUrl:null;e.color=(pf&&pf.color)||hashColor(e.peer);
-      e.rem=e.isNpc?null:e.isMe?(e.pr.st==='study'?Math.max(0,Math.round((e.pr.end-Date.now())/1000)):e.pr.rem):remOf(e.raw);
+      e.rem=e.isNpc?null:e.isMe?(e.pr.st==='study'||e.pr.st==='break'?Math.max(0,Math.round((e.pr.end-Date.now())/1000)):e.pr.rem):remOf(e.raw);
       const say=sayOf(e.key,e.pr);e.say=!!say;e.bub=say||(e.isNpc?'':autoBubble(e.pr,e.rem));e.bubS=say||(e.isNpc?'':shortBubble(e.pr,e.rem));
       if(!e.isMe)names[e.peer]=e.name;
       if(!e.isMe&&!e.isNpc)heardFrom(e);
@@ -2059,8 +2072,8 @@ async function renderFriends(){
 function tickTimes(){
   document.querySelectorAll('.ftime').forEach(el=>{
     const e=PEOPLE.find(x=>x.key===el.dataset.k);if(!e)return;
-    let r=e.isNpc?null:e.isMe?(e.pr.st==='study'?Math.max(0,Math.round((e.pr.end-Date.now())/1000)):e.pr.rem):remOf(e.raw);
-    el.textContent=(e.pr.st==='study'||e.pr.st==='seat')&&r!=null?mmss(r):'';
+    let r=e.isNpc?null:e.isMe?(e.pr.st==='study'||e.pr.st==='break'?Math.max(0,Math.round((e.pr.end-Date.now())/1000)):e.pr.rem):remOf(e.raw);
+    el.textContent=(e.pr.st==='study'||e.pr.st==='seat')&&r!=null?mmss(r):e.pr.st==='break'&&r!=null?'쉬는 중 '+mmss(r):'';
   });
 }
 function personEl(e){
@@ -2188,7 +2201,7 @@ function drawFloor(taken){
       if(e){const studying=e.pr.st==='study'||e.pr.st==='seat';
         const c=cupFor(e);
         if(c)fl+=c.replace('<svg viewBox="0 0 200 250"',`<svg x="${cx-face*22-9}" y="${FY-86}" width="18" height="22" viewBox="0 0 200 250"`);
-        fl+=mmPlace(e,hx,FY-41,{pose:'sit',face:studying?'focus':(e.pr.st==='finished'||e.pr.st==='done'?'happy':'smile')});
+        fl+=mmPlace(e,hx,FY-41,{pose:'sit',face:studying?'focus':(e.pr.st==='finished'||e.pr.st==='done'||e.pr.st==='break'?'happy':'smile')});
         {const X=cx+(hx-cx)*TS;hud+=hudPerson(e,X,FY-138*TS,FY+4,[X-38*TS,FY-138*TS,76*TS,138*TS],e.sd);
          if(e.isNpc)hud+=`<button class="hsit npcseat" data-seat="${i}" style="${pct(X,FY-70*TS)}" aria-label="${i+1}번 자리, AI 손님에게 비켜달라고 하기">여기 앉기</button>`;}
       }else hud+=`<button class="hsit" data-seat="${i}" style="${pct(cx+(hx-cx)*TS,FY-46*TS)}" aria-label="${i+1}번 자리에 앉기">앉기</button>`;
@@ -2209,7 +2222,7 @@ $('hud').addEventListener('click',ev=>{
 function leftOf(e){
   const pr=e.pr;
   if(pr.st==='hold')return typeof pr.left==='number'?Math.min(1,Math.max(0,pr.left)):1;
-  if(pr.st==='finished')return .1;
+  if(pr.st==='finished'||pr.st==='break')return .1;
   if(pr.st==='study'||pr.st==='seat')return 1-.9*progOf(pr,e.rem);
   if(pr.st==='done')return 1;
   return null;
