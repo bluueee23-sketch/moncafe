@@ -222,6 +222,22 @@ function handleAct(room, id, m) {
   } else if (m.a === 'npcSay' || m.a === 'refill') {
     const n = w.npcs.find((x) => x.key === m.key); if (!n) return;
     if (m.a === 'refill') { n.left = 1; n.st = 'hold'; n.leaveAt = 0; npcSay(n, '감사해요! 여기 팁'); } else npcSay(n);
+  } else if (m.a === 'chatseed' && Array.isArray(m.list)) {
+    // the server forgets chat when it sleeps; browsers keep a copy and hand back what is missing
+    const log = chats.get(room) || [], seen = new Set(log.map((e) => e.id + '|' + e.at + '|' + e.t));
+    let added = 0;
+    for (const x of m.list.slice(-200)) {
+      if (!x || typeof x.t !== 'string' || typeof x.at !== 'number' || x.at > now + 60000 || x.at < now - 30 * 864e5) continue;
+      const e = { id: clean(String(x.id || ''), 32) || 'guest', name: String(x.name || '').slice(0, 12), t: x.t.trim().slice(0, 100), at: x.at };
+      const k = e.id + '|' + e.at + '|' + e.t; if (!e.t || seen.has(k)) continue;
+      seen.add(k); log.push(e); added++;
+    }
+    if (!added) return;
+    log.sort((p, q) => p.at - q.at); if (log.length > 200) log.splice(0, log.length - 200);
+    chats.set(room, log);
+    const msg = JSON.stringify({ t: 'chatlog', list: log });
+    for (const x of (rooms.get(room) || new Map()).values()) x.conn.send(msg);
+    return;
   } else if (m.a === 'guest') {
     spawnNpc(w, String(m.name || '').slice(0, 20), String(m.d || ''));
   } else return;
