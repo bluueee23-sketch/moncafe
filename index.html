@@ -62,6 +62,11 @@ img{max-width:100%}
 .cp-ln span{background:#2F7A5A;color:#fff;border-radius:9px;padding:1px 8px;justify-self:start;word-break:break-all}
 .cp-ln.mine b{color:var(--mine,#C2577A)}
 .cp-ln.mine span{background:var(--mine,#C2577A)}
+#chatBtn{position:relative}
+.unread{font-style:normal;position:absolute;top:-6px;right:-6px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#E0475B;color:#fff;font-size:10.5px;font-weight:800;line-height:17px;text-align:center;box-shadow:0 0 0 2px var(--surface)}
+.cp-in{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--line)}
+.cp-in input{flex:1;min-width:0;border:1px solid var(--line);border-radius:99px;padding:6px 12px;font:inherit;font-size:13px;background:var(--surface);color:var(--ink)}
+.cp-ln span{white-space:pre-wrap}
 #chatBtn[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
 #clock.brk{color:var(--mine,#C2577A)}
 </style>
@@ -815,7 +820,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
     <div class="fhead">
       <h3>오늘의 매장 <span class="fcount" id="fCount">1명</span><span class="legend"><i class="dot"></i>사람 <i class="aib">AI</i>손님</span></h3>
       <div class="fhr">
-        <button class="mini" id="chatBtn" aria-pressed="false">대화 기록</button>
+        <button class="mini" id="chatBtn" aria-pressed="false">채팅<i class="unread" id="unread" hidden></i></button>
         <button class="mini" id="quietBtn" aria-pressed="false">알림음 5분 끄기</button>
         <button class="mini" id="pickSeat" aria-pressed="false">자리 옮기기</button>
         <details class="mm" id="mmBox">
@@ -848,8 +853,8 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
       <div class="chatpanel" id="chatPanel" hidden></div>
       <div class="adcard" id="adCard" hidden></div>
       <div class="saybar">
-        <input id="sayIn" maxlength="20" placeholder="말풍선 띄우기 (20자까지)">
-        <button class="mini sit" id="sayGo">띄우기</button>
+        <input id="sayIn" maxlength="100" placeholder="매장 채팅 (머리 위 말풍선으로도 떠요)">
+        <button class="mini sit" id="sayGo">보내기</button>
         <span class="facts" id="quick"></span>
       </div>
     </div>
@@ -1756,23 +1761,39 @@ setInterval(()=>{if(!document.hidden&&!WORLD){npcTick()}},3000);
 /* shared world from the server: the same guests and cat for everyone in the room */
 let WORLD=null;
 let CHAT=[],CHAT_SHARED=false;
-function addChat(e){CHAT.push(e);if(CHAT.length>300)CHAT.splice(0,CHAT.length-300);if(selKey&&!String(selKey).startsWith('npc:'))showSel();renderChatPanel()}
+let UNREAD=0;
+function setUnread(n){UNREAD=n;const u=$('unread');if(u){u.hidden=!n;u.textContent=n>99?'99+':String(n)}}
+function addChat(e){CHAT.push(e);if($('chatPanel').hidden&&e.id!==myPeerId()&&e.id!=='~me')setUnread(UNREAD+1);if(CHAT.length>300)CHAT.splice(0,CHAT.length-300);if(selKey&&!String(selKey).startsWith('npc:'))showSel();renderChatPanel()}
 function hhmmOf(t){const d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
 function renderChatPanel(){
-  const p=$('chatPanel');if(!p||p.hidden)return;p.textContent='';
-  const top=document.createElement('div');top.className='cp-top';
-  const h=document.createElement('b');h.textContent='매장 대화 기록';
-  const x=document.createElement('button');x.className='mini';x.textContent='닫기';x.onclick=()=>{p.hidden=true;$('chatBtn').setAttribute('aria-pressed','false')};
-  top.append(h,x);p.appendChild(top);
-  const list=document.createElement('div');list.className='cp-list';
-  const items=CHAT.slice(-60),me=myPeerId();
-  if(!items.length){const em=document.createElement('p');em.className='sub';em.textContent='아직 오늘 매장에서 나온 말풍선이 없어요.';list.appendChild(em)}
-  for(const c of items){const ln=document.createElement('div');ln.className='cp-ln'+(c.id===me?' mine':'');
+  const p=$('chatPanel');if(!p||p.hidden)return;
+  let list=p.querySelector('.cp-list');
+  if(!list){
+    p.textContent='';
+    const top=document.createElement('div');top.className='cp-top';
+    const h=document.createElement('b');h.textContent='매장 채팅';
+    const x=document.createElement('button');x.className='mini';x.textContent='닫기';x.onclick=()=>{p.hidden=true;$('chatBtn').setAttribute('aria-pressed','false')};
+    top.append(h,x);p.appendChild(top);
+    list=document.createElement('div');list.className='cp-list';p.appendChild(list);
+    const f=document.createElement('form');f.className='cp-in';
+    const ip=document.createElement('input');ip.id='cpIn';ip.maxLength=100;ip.placeholder='메시지 입력 (Enter로 보내기)';ip.autocomplete='off';
+    const sb=document.createElement('button');sb.className='mini sit';sb.textContent='보내기';
+    f.onsubmit=ev=>ev.preventDefault();sb.type='button';sb.onclick=()=>{say(ip.value);ip.focus()};
+    ip.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&!ev.isComposing&&ev.keyCode!==229){ev.preventDefault();say(ip.value)}});
+    f.append(ip,sb);p.appendChild(f);
+  }
+  const atEnd=list.scrollHeight-list.scrollTop-list.clientHeight<40;
+  list.textContent='';
+  const items=CHAT.slice(-80),me=myPeerId();
+  if(!items.length){const em=document.createElement('p');em.className='sub';em.textContent='아직 대화가 없어요. 먼저 인사해 볼까요?';list.appendChild(em)}
+  for(const c of items){const ln=document.createElement('div');ln.className='cp-ln'+(c.id===me||c.id==='~me'?' mine':'');
     const tm=document.createElement('time');tm.textContent=hhmmOf(c.at);
-    const nm=document.createElement('b');nm.textContent=(c.id===me?(nick||'나')+' (나)':(c.name||names[c.id]||'동료'));
+    const nm=document.createElement('b');nm.textContent=(c.id===me||c.id==='~me'?(nick||'나'):(c.name||names[c.id]||'동료'));
     const tx=document.createElement('span');tx.textContent=c.t;ln.append(tm,nm,tx);list.appendChild(ln)}
-  p.appendChild(list);setTimeout(()=>{list.scrollTop=list.scrollHeight},0);
+  if(atEnd||cpFocus)list.scrollTop=list.scrollHeight;
+  if(cpFocus){cpFocus=false;$('cpIn').focus()}
 }
+let cpFocus=false;
 function applyWorld(w){
   const first=!WORLD;WORLD=w;
   NPCS=(w.npcs||[]).map(n=>({...n,lines:[],shared:true}));
@@ -1984,12 +2005,12 @@ function heardFrom(e){
   const s=e.pr.say;if(!s||typeof s.at!=='number')return;
   if(!(e.peer in heardSay)){heardSay[e.peer]=s.at;return}   // what was already said before I arrived stays silent
   if(heardSay[e.peer]===s.at)return;heardSay[e.peer]=s.at;
-  if(!CHAT_SHARED&&typeof s.t==='string')addChat({id:e.peer,name:e.name,t:s.t.slice(0,20),at:Date.now()});
+  if(!CHAT_SHARED&&typeof s.t==='string')addChat({id:e.peer,name:e.name,t:s.t.slice(0,100),at:Date.now()});
   if(!e.say||MUTED.has(e.peer)||Date.now()<QUIET)return;chime();
 }
 function quietLabel(){const b=$('quietBtn');if(!b)return;const left=QUIET-Date.now();
   b.textContent=left>0?`조용히 ${mmss(Math.ceil(left/1000))} · 해제`:'알림음 5분 끄기';b.setAttribute('aria-pressed',String(left>0))}
-$('chatBtn').onclick=()=>{const p=$('chatPanel');p.hidden=!p.hidden;$('chatBtn').setAttribute('aria-pressed',String(!p.hidden));renderChatPanel()};
+$('chatBtn').onclick=()=>{const p=$('chatPanel');p.hidden=!p.hidden;$('chatBtn').setAttribute('aria-pressed',String(!p.hidden));if(!p.hidden){setUnread(0);cpFocus=true}renderChatPanel()};
 $('quietBtn').onclick=()=>{QUIET=QUIET>Date.now()?0:Date.now()+5*60*1000;saveMute();quietLabel();toast(QUIET?'5분 동안 동료 말풍선 알림음을 꺼요.':'알림음을 다시 켰어요.')};
 setInterval(quietLabel,1000);quietLabel();
 
@@ -2028,7 +2049,7 @@ function shortBubble(pr,rem){
 function sayOf(key,pr){
   const s=pr.say;if(!s||typeof s.t!=='string'||!s.t.trim()||typeof s.at!=='number')return null;
   const k=key+':'+s.at;if(!(k in sayLocal))sayLocal[k]=Date.now();
-  return Date.now()-sayLocal[k]<SAY_MS?s.t.trim().slice(0,20):null;
+  const tt=s.t.trim();return Date.now()-sayLocal[k]<SAY_MS?(tt.length>20?tt.slice(0,19)+'…':tt):null;
 }
 let rendering=false,again=false;
 async function renderFriends(){
@@ -2298,8 +2319,8 @@ function stealDrink(e){
   toast(join?`${e.name}님 ${r.n} 뺏어먹는 중 ㅋㅋ 남은 ${mmss(rem)} 같이 집중!`:`${e.name}님 ${r.n} 뺏어먹는 중 ㅋㅋ 내 타이머 ${S.dur}분 시작!`);
 }
 function say(t){
-  t=(t||'').trim().slice(0,20);if(!t)return;
-  mySay={t,at:Date.now()};$('sayIn').value='';syncPresence();
+  t=(t||'').trim().slice(0,100);if(!t)return;
+  mySay={t,at:Date.now()};$('sayIn').value='';const ci=$('cpIn');if(ci&&ci.value.trim().slice(0,100)===t)ci.value='';syncPresence();
   if(!CHAT_SHARED)addChat({id:myPeerId()||'~me',name:nick||'나',t,at:Date.now()});
   setTimeout(()=>renderFriends(),SAY_MS+100);
 }

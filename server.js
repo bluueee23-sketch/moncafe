@@ -264,7 +264,7 @@ server.on('upgrade', (req, socket) => {
         entry.state = m.state; broadcast(me.room);
         // keep what people say so others can read it later
         if (said && typeof said.t === 'string' && said.t.trim() && (!before || before.at !== said.at)) {
-          const e = { id: me.id, name: String(m.state.nick || '').slice(0, 12), t: said.t.trim().slice(0, 20), at: Date.now() };
+          const e = { id: me.id, name: String(m.state.nick || '').slice(0, 12), t: said.t.trim().slice(0, 100), at: Date.now() };
           if (!chats.has(me.room)) chats.set(me.room, []);
           const log = chats.get(me.room); log.push(e); if (log.length > 200) log.splice(0, log.length - 200);
           const msg = JSON.stringify({ t: 'chat', e });
