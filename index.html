@@ -933,6 +933,11 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
 .aib.stf{background:#F2C46B;color:#5A3A1C}
 .bub.hb.staffb{background:#FFF3DF;border-color:#C99A5B;color:#5A3A1C}
 .bub.hb.staffb::after{border-top-color:#FFF3DF}
+/* 친구/손님 메뉴 닫기 버튼 */
+.fsel{position:relative;padding-right:38px}
+.fsel .fx{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:13px;line-height:1;display:grid;place-items:center;cursor:pointer;padding:0}
+.fsel .fx:hover{color:var(--ink);background:var(--surface-2)}
+@media (min-width:820px){.friends .fsel{position:absolute}}
 </style>
 
 <div class="app" id="app" data-sky="day" data-scr="scrMenu">
@@ -2499,10 +2504,15 @@ function cupFor(e){
   const i=ideal(r);
   return cupSVG(i.kind,i.L,{ice:i.ice,f,iceScale:Math.max(.4,f),straw:r.ice});
 }
+function closeSel(){if(!selKey&&$('fSel').hidden)return;selKey=null;$('fSel').hidden=true;lastSig='';renderFriends()}
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&selKey)closeSel()});
+// 매장의 빈 곳을 누르면 닫혀요
+document.addEventListener('pointerdown',ev=>{if(!selKey)return;const t=ev.target;if(t.closest('#fSel')||t.closest('.hhit'))return;if(t.closest('.hall'))closeSel()});
 function showSel(){
   const box=$('fSel'),e=PEOPLE.find(x=>x.key===selKey);
   if(!e){box.hidden=true;return}
   box.textContent='';box.hidden=false;
+  {const x=document.createElement('button');x.className='fx';x.type='button';x.setAttribute('aria-label','닫기');x.textContent='✕';x.onclick=ev=>{ev.stopPropagation();closeSel()};box.appendChild(x)}
   if(e.isNpc){const n=e.npc,r=byId(n.d);
     const h=document.createElement('b');h.textContent=n.name;box.appendChild(h);
     const info=document.createElement('span');info.className='sub';info.textContent=`${r?r.n:'커피'} ${n.st==='finished'?'다 마심':'마시는 중'} · 남은 양 ${Math.round(n.left*100)}%`;box.appendChild(info);
