@@ -37,7 +37,7 @@ img{max-width:100%}
 .flv{font-size:12.5px;color:#C2566C;font-weight:600}
 .hsit.npcseat{display:none;background:rgba(47,93,76,.9);border:1.5px solid #fff;color:#fff}
 .hall.pick .hsit.npcseat{display:block}
-#quietBtn[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+#quietBtn[aria-pressed="true"],#allQuietBtn[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
 .bhbtns{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
 .btn.ask{background:#FFF3DF;color:#5A3A1C;box-shadow:0 3px 0 #C99A5B;display:flex;flex-direction:column;align-items:flex-start;line-height:1.15;padding:8px 14px}
 .btn.ask small{font-family:var(--body);font-size:11px;opacity:.75;margin-top:2px}
@@ -942,19 +942,19 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
 .hname{overflow:visible}
 .hname .fh{position:absolute;top:0;right:-2px;transform:translateY(-62%) rotate(6deg);margin:0;font-size:.95em;line-height:1;letter-spacing:-.08em;white-space:nowrap;pointer-events:none;
   color:#FF7A98;text-shadow:0 0 0 #fff,1.2px 0 0 #fff,-1.2px 0 0 #fff,0 1.2px 0 #fff,0 -1.2px 0 #fff,1px 1px 0 #fff,-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,0 1.5px 2px rgba(0,0,0,.25)}
-/* 처음 온 사람: 이름을 아직 안 정했으면 내 캐릭터 머리 둘레에 반짝반짝 */
-.spark{position:absolute;transform:translate(-50%,-50%);width:118px;height:96px;pointer-events:none;z-index:3}
-.spark i{position:absolute;font-style:normal;color:#F2B83B;text-shadow:0 0 1px #8A5A1C,0 0 8px #fff,0 0 3px #fff;animation:twinkle 1.6s ease-in-out infinite}
-.spark i:nth-child(1){left:0;top:30px;font-size:22px}
-.spark i:nth-child(2){right:0;top:12px;font-size:26px;animation-delay:.35s}
-.spark i:nth-child(3){left:22px;top:-6px;font-size:18px;animation-delay:.7s}
-.spark i:nth-child(4){right:6px;top:60px;font-size:16px;animation-delay:1.05s}
-.spark i:nth-child(5){left:68px;top:-14px;font-size:14px;animation-delay:1.3s}
-@keyframes twinkle{0%,100%{opacity:.35;transform:scale(.65) rotate(0)}50%{opacity:1;transform:scale(1.15) rotate(20deg)}}
-@media (prefers-reduced-motion:reduce){.spark i{animation:none;opacity:.9}}
-.hname .pen{font-style:normal;margin-left:.3em;opacity:.9;flex:none}
-#mmBox summary.sparkle::after{content:" ✦ 이름 정하기";color:#C9922E;font-weight:700;animation:twinkle2 1.6s ease-in-out infinite}
-@keyframes twinkle2{0%,100%{opacity:.55}50%{opacity:1}}
+/* 처음 온 사람: 이름을 아직 안 정했으면 "내 캐릭터" 버튼이 반짝반짝 */
+#mmBox summary{position:relative}
+#mmBox .ssp{display:none}
+#mmBox summary.sparkle{border-color:#E8B44C!important;background:#FFF6DC!important;animation:glow 1.6s ease-in-out infinite}
+#mmBox summary.sparkle .ssp{display:block;position:absolute;inset:-12px -14px;pointer-events:none}
+#mmBox .ssp i{position:absolute;font-style:normal;color:#F2B83B;text-shadow:0 0 1px #8A5A1C,0 0 6px #fff;animation:twinkle 1.6s ease-in-out infinite;line-height:1}
+#mmBox .ssp i:nth-child(1){left:0;top:0;font-size:15px}
+#mmBox .ssp i:nth-child(2){right:2px;top:-2px;font-size:12px;animation-delay:.4s}
+#mmBox .ssp i:nth-child(3){right:-2px;bottom:0;font-size:16px;animation-delay:.8s}
+#mmBox .ssp i:nth-child(4){left:10px;bottom:-3px;font-size:11px;animation-delay:1.2s}
+@keyframes twinkle{0%,100%{opacity:.3;transform:scale(.6) rotate(0)}50%{opacity:1;transform:scale(1.15) rotate(20deg)}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(242,184,59,.0)}50%{box-shadow:0 0 0 4px rgba(242,184,59,.35)}}
+@media (prefers-reduced-motion:reduce){#mmBox .ssp i,#mmBox summary.sparkle{animation:none}}
 </style>
 
 <div class="app" id="app" data-sky="day" data-scr="scrMenu">
@@ -973,10 +973,10 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
       <div class="fhr">
         <button class="mini" id="chatBtn" aria-pressed="false">채팅<i class="unread" id="unread" hidden></i></button>
         <button class="mini" id="bgmBtn" aria-pressed="true" title="카페 배경음">♪ 켜짐</button>
-        <button class="mini" id="quietBtn" aria-pressed="false">알림 5분 끄기</button>
+        <button class="mini" id="allQuietBtn" aria-pressed="false" title="친구 말풍선 알림음 전부 끄기/켜기">🔔 알림 켜짐</button><button class="mini" id="quietBtn" aria-pressed="false">알림 5분 끄기</button>
         <button class="mini" id="pickSeat" aria-pressed="false">자리 옮기기</button>
         <details class="mm" id="mmBox">
-          <summary>내 캐릭터</summary>
+          <summary>내 캐릭터<span class="ssp" aria-hidden="true"><i>✦</i><i>✧</i><i>✦</i><i>✧</i></span></summary>
           <div class="mmbody">
             <div class="mmprev" id="mmPrev"></div>
             <div class="mmside">
@@ -2223,6 +2223,7 @@ setInterval(()=>{if(document.hidden)return;for(const e of PEOPLE)if(!e.isMe&&!e.
 /* ---------- sounds: a soft ding when a coworker says something; mute a person or everyone for 5 min ---------- */
 let MUTED=new Set();try{MUTED=new Set(JSON.parse(localStorage.getItem('barista.muted')||'[]'))}catch(e){}
 let QUIET=0;try{QUIET=+localStorage.getItem('barista.quiet')||0}catch(e){}
+let ALLQUIET=false;try{ALLQUIET=localStorage.getItem('barista.allquiet')==='1'}catch(e){}
 const heardSay={};
 function saveMute(){try{localStorage.setItem('barista.muted',JSON.stringify([...MUTED]));localStorage.setItem('barista.quiet',String(QUIET))}catch(e){}}
 function chime(){const a=ac();if(!a)return;try{a.resume&&a.resume()}catch(e){}
@@ -2233,7 +2234,7 @@ function heardFrom(e){
   if(!(e.peer in heardSay)){heardSay[e.peer]=s.at;return}   // what was already said before I arrived stays silent
   if(heardSay[e.peer]===s.at)return;heardSay[e.peer]=s.at;
   if(!CHAT_SHARED&&typeof s.t==='string')addChat({id:e.peer,name:e.name,t:s.t.slice(0,100),at:Date.now()});
-  if(!e.say||MUTED.has(e.peer)||Date.now()<QUIET)return;chime();
+  if(!e.say||ALLQUIET||MUTED.has(e.peer)||Date.now()<QUIET)return;chime();
 }
 function quietLabel(){const b=$('quietBtn');if(!b)return;const left=QUIET-Date.now();
   b.textContent=left>0?`조용히 ${mmss(Math.ceil(left/1000))} · 해제`:'알림 5분 끄기';b.setAttribute('aria-pressed',String(left>0))}
@@ -2243,6 +2244,10 @@ $('chatBtn').onclick=()=>setChat($('chatPanel').hidden,true);
 {let o=true;try{o=localStorage.getItem('barista.chat')!=='0'}catch(e){}setChat(o,false)}
 $('quietBtn').onclick=()=>{QUIET=QUIET>Date.now()?0:Date.now()+5*60*1000;saveMute();quietLabel();toast(QUIET?'5분 동안 동료 말풍선 알림음을 꺼요.':'알림음을 다시 켰어요.')};
 setInterval(quietLabel,1000);quietLabel();
+function allQuietLabel(){const b=$('allQuietBtn');b.textContent=ALLQUIET?'🔕 알림 꺼짐':'🔔 알림 켜짐';b.setAttribute('aria-pressed',String(ALLQUIET));$('quietBtn').hidden=ALLQUIET}
+$('allQuietBtn').onclick=()=>{ALLQUIET=!ALLQUIET;try{localStorage.setItem('barista.allquiet',ALLQUIET?'1':'0')}catch(e){}allQuietLabel();
+  toast(ALLQUIET?'친구 말풍선 알림음을 전부 껐어요. 집중 모드!':'친구 말풍선 알림음을 다시 켰어요.')};
+allQuietLabel();
 
 /* hall: seats, bubbles */
 const SEATS=12,SAY_MS=8000;
@@ -2460,9 +2465,8 @@ function hudPerson(e,x,headY,nameY,hit,side){
   headY-=(e.lift||0)*30;
   const pop=lastBub[e.key]!==e.bub;lastBub[e.key]=e.bub;
   const kind=e.isNpc?' ai':e.isStaff?' staffb':e.say?' say':' st';
-  const spark=e.isMe&&needName()?`<span class="spark" style="${pct(x,headY+58)}" aria-hidden="true"><i>✦</i><i>✦</i><i>✧</i><i>✦</i><i>✧</i></span>`:'';
-  return spark+(e.bub?`<span class="bub hb ${side||'mid'}${kind}${pop?' pop':''}" style="${pct(x,headY)}"><span class="lg">${esc(e.bub)}</span><span class="sh">${esc(e.bubS)}</span></span>`:'')+
-    `<span class="hname${e.isMe?' me':''}${e.isStaff?' staff':e.isNpc?' npc':' human'}" style="${pct(Math.min(Math.max(x,VX+70),VX+VBW-70),nameY)};max-width:${((116*TS-10)/VBW*100).toFixed(2)}%"><span class="nl">${e.isStaff?'<i class="aib stf">직원</i>':e.isNpc?'<i class="aib">AI</i>':'<i class="dot"></i>'}<b class="nm">${esc(e.name)}</b>${e.isMe&&needName()?'<i class="pen">✎</i>':''}${!e.isNpc&&!e.isMe&&!e.isStaff?friendHearts(e.peer):''}</span>${e.isStaff?'':`<span class="ftime" data-k="${esc(e.key)}"></span>`}</span>`+(e.isStaff?'':
+  return (e.bub?`<span class="bub hb ${side||'mid'}${kind}${pop?' pop':''}" style="${pct(x,headY)}"><span class="lg">${esc(e.bub)}</span><span class="sh">${esc(e.bubS)}</span></span>`:'')+
+    `<span class="hname${e.isMe?' me':''}${e.isStaff?' staff':e.isNpc?' npc':' human'}" style="${pct(Math.min(Math.max(x,VX+70),VX+VBW-70),nameY)};max-width:${((116*TS-10)/VBW*100).toFixed(2)}%"><span class="nl">${e.isStaff?'<i class="aib stf">직원</i>':e.isNpc?'<i class="aib">AI</i>':'<i class="dot"></i>'}<b class="nm">${esc(e.name)}</b>${!e.isNpc&&!e.isMe&&!e.isStaff?friendHearts(e.peer):''}</span>${e.isStaff?'':`<span class="ftime" data-k="${esc(e.key)}"></span>`}</span>`+(e.isStaff?'':
     `<button class="hhit${selKey===e.key?' sel':''}" data-k="${esc(e.key)}" aria-label="${esc(e.name+': '+e.bub)}" style="${box(hit[0],hit[1],hit[2],hit[3])}"></button>`);
 }
 function drawFloor(taken){
