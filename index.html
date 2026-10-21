@@ -1788,15 +1788,15 @@ function spawnNpc(name,d){
   if(p&&here(p.name)){const n=NPCS.find(x=>x.name===p.name);n.d=d||n.d;n.left=1;n.st='hold';n.leaveAt=0;return}
   if(!p){const free=NPC_POOL.filter(x=>!here(x.name));if(!free.length)return;p=free[Math.random()*free.length|0]}
   NPCS.push({name:p.name,look:p.look,lines:p.lines,d:d||p.d,key:'npc:'+p.name,left:1,st:'hold',seat:null,
-    drain:1/(240+Math.random()*300),say:{t:'안녕하세요~',at:Date.now()},leaveAt:0});
+    drain:1/(240+Math.random()*300),say:Math.random()<.35?{t:'안녕하세요~',at:Date.now()}:null,leaveAt:0});
 }
 function npcSay(n,t){n.say={t:(t||n.lines[Math.random()*n.lines.length|0]).slice(0,20),at:Date.now()}}
 function npcTarget(){const real=PEOPLE.filter(e=>!e.isNpc).length;return Math.max(0,Math.min(5,SEATS-real-3))}
 function npcTick(){
   const now=Date.now();
   for(const n of NPCS){
-    if(n.st==='hold'){n.left=Math.max(.1,n.left-n.drain*3);if(n.left<=.1){n.st='finished';n.leaveAt=now+25000;npcSay(n,'잘 마셨어요!')}}
-    if(!n.say||now-n.say.at>SAY_MS+60000){if(Math.random()<.01)npcSay(n)}
+    if(n.st==='hold'){n.left=Math.max(.1,n.left-n.drain*3);if(n.left<=.1){n.st='finished';n.leaveAt=now+25000;if(Math.random()<.35)npcSay(n,'잘 마셨어요!')}}
+    if(now-(npcTick.last||0)>300000&&(!n.say||now-n.say.at>720000)&&Math.random()<.004){npcSay(n);npcTick.last=now}
   }
   const gone=NPCS.filter(n=>n.leaveAt&&now>n.leaveAt);if(gone.length)NPCS=NPCS.filter(n=>!gone.includes(n));
   if(NPCS.length<npcTarget()&&Math.random()<.12)spawnNpc();

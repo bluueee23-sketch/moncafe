@@ -153,7 +153,7 @@ function spawnNpc(w, name, d) {
   if (!p) { const free = NPC_POOL.filter((x) => !here(x.name)); if (!free.length) return; p = pick(free); }
   const n = { name: p.name, look: p.look, lines: p.lines, d: DRINKS.has(d) ? d : p.d, key: 'npc:' + p.name, left: 1, st: 'hold',
     seat: null, drain: 1 / (240 + Math.random() * 300), say: null, leaveAt: 0 };
-  npcSay(n, '안녕하세요~');
+  if (Math.random() < 0.35) npcSay(n, '안녕하세요~');
   w.npcs.push(n);
 }
 function catWalk(cat, to, now) { cat.mode = 'walk'; cat.at = to; cat.dur = 7 + Math.random() * 5; cat.until = now + cat.dur * 1000; cat.v++; }
@@ -173,8 +173,9 @@ function tickWorld(room) {
     if (free.length) { n.seat = pick(free); if (had) npcSay(n, '자리 비켜드릴게요'); } else { n.seat = null; n.leaveAt = now; }
   }
   for (const n of w.npcs) {
-    if (n.st === 'hold') { n.left = Math.max(0.1, n.left - n.drain * 2); if (n.left <= 0.1) { n.st = 'finished'; n.leaveAt = now + 25000; npcSay(n, '잘 마셨어요!'); } }
-    if ((!n.say || now - n.say.at > 60000) && Math.random() < 0.012) npcSay(n);
+    if (n.st === 'hold') { n.left = Math.max(0.1, n.left - n.drain * 2); if (n.left <= 0.1) { n.st = 'finished'; n.leaveAt = now + 25000; if (Math.random() < 0.35) npcSay(n, '잘 마셨어요!'); } }
+    // 혼잣말은 매장 전체에서 5분에 한 번 이하, 한 사람은 12분에 한 번 이하로만(평균 8분쯤에 한 마디)
+    if (now - (w.lastChatter || 0) > 300000 && (!n.say || now - n.say.at > 720000) && Math.random() < 0.004) { npcSay(n); w.lastChatter = now; }
   }
   w.npcs = w.npcs.filter((n) => !(n.leaveAt && now > n.leaveAt));
   const target = Math.max(0, Math.min(4, SEATS - count - 3));
