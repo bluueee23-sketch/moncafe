@@ -66,6 +66,11 @@ img{max-width:100%}
 .cp-ln.mine b{color:var(--mine,#C2577A)}
 .cp-ln.mine span{background:var(--mine,#C2577A)}
 #chatBtn{position:relative}
+.favline{margin-top:10px;display:flex;align-items:baseline;gap:8px;padding:9px 14px;border-radius:99px;background:var(--surface);border:1px solid var(--line);font-size:13.5px;white-space:nowrap;overflow:hidden}
+.favline span{color:var(--muted)}
+.favline b{font-weight:700;overflow:hidden;text-overflow:ellipsis}
+.favline .n{margin-left:auto;font-size:12.5px}
+.app[data-scr="scrBar"] > #chatPanel{display:none}
 #enterDoor{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:rgba(42,33,27,.42);backdrop-filter:blur(3px);cursor:pointer;animation:fadeIn .25s}
 #enterDoor .door{background:var(--surface);border:6px solid var(--oak2,#8A5A36);border-radius:90px 90px 18px 18px;padding:34px 30px 22px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;max-width:300px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
 #enterDoor .bell{font-size:34px;animation:ring 1.6s ease-in-out infinite;transform-origin:50% 0}
@@ -832,7 +837,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
 @media (prefers-reduced-motion:reduce){.jindol{transition:none!important}}
 </style>
 
-<div class="app" id="app" data-sky="day">
+<div class="app" id="app" data-sky="day" data-scr="scrMenu">
   <div class="awning" aria-hidden="true"></div>
   <header class="sign">
     <div class="sign-left">
@@ -899,10 +904,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
       </div>
       <div class="menu" id="menu"></div>
     </div>
-    <div class="panel" style="margin-top:16px">
-      <h3>오늘 근무 일지</h3>
-      <div class="rows" id="rows"></div>
-    </div>
+    <div class="favline" id="rows"></div>
   </section>
 
   <!-- BAR -->
@@ -1074,15 +1076,16 @@ function ideal(r){
 /* ---------- screens ---------- */
 const SCR=['scrMenu','scrBar','scrDone','scrStudy'];
 let CUR='scrMenu';
-function show(id){CUR=id;SCR.forEach(s=>$(s).hidden=s!==id);window.scrollTo({top:0});syncPresence();if(typeof saveStudy==='function')saveStudy()}
+function show(id){CUR=id;$('app').dataset.scr=id;if(id!=='scrBar'&&typeof setUnread==='function'&&!$('chatPanel').hidden){try{setUnread(0);renderChatPanel()}catch(e){}}SCR.forEach(s=>$(s).hidden=s!==id);window.scrollTo({top:0});syncPresence();if(typeof saveStudy==='function')saveStudy()}
 
 function renderLedger(){
   const d=day(),serve=d.cups.length;
   $('ledger').innerHTML=`<span>오늘 <b>${serve}</b>잔</span><span>공부 <b>${d.focus}</b>분</span><span>팁 <b>${won(d.tips)}</b></span>`;
   renderPick();
-  const rows=$('rows');
-  if(!d.cups.length){rows.innerHTML='<p class="empty">출근 도장만 찍었어요. 직원 음료 한 잔 만들고 근무 시작해볼까요?</p>';return}
-  rows.innerHTML=d.cups.slice().reverse().map(c=>`<div class="row"><span class="t">${c.at}</span><span>${c.n} <span class="stars">${starStr(c.st)}</span>${c.guest?` <span class="sub" style="font-size:12px">· ${c.guest}</span>`:''}</span><span class="r">${c.guest?'팁 '+won(c.tip):(c.min?c.min+'분 공부':(c.ordered?'나에게 시킨 음료':c.auto?'공부 중 자동 서빙':'직원 음료'))}</span></div>`).join('');
+  // one line instead of the full journal: my most-drunk drink so far
+  const cnt={};for(const k in DB.days)for(const c of DB.days[k].cups||[])if(!c.guest)cnt[c.n]=(cnt[c.n]||0)+1;
+  const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0],rows=$('rows');
+  rows.innerHTML=top?`<span>내 최애 음료</span><b>${String(top[0]).replace(/[&<>]/g,'')}</b><span class="n">${top[1]}잔째</span>`:'<span>내 최애 음료</span><b>아직 없어요</b><span class="n">첫 잔을 만들어 볼까요?</span>';
 }
 function renderMenu(){
   $('menu').innerHTML=R.filter(r=>!r.special).map(r=>{const i=ideal(r);return `<button class="mcard" data-id="${r.id}">${cupSVG(i.kind,i.L,{ice:i.ice,straw:r.ice})}<span class="nm">${r.n}</span><span class="pr">${won(r.p)} · ${r.steps.length}단계</span><span class="tag ${r.ice?'ice':'hot'}">${r.ice?'ICE':'HOT'}</span></button>`}).join('');
@@ -1817,7 +1820,7 @@ function mergeChatlog(list){
 }
 let UNREAD=0;
 function setUnread(n){UNREAD=n;const u=$('unread');if(u){u.hidden=!n;u.textContent=n>99?'99+':String(n)}}
-function addChat(e){CHAT.push(e);if($('chatPanel').hidden&&e.id!==myPeerId()&&e.id!=='~me')setUnread(UNREAD+1);if(CHAT.length>200)CHAT.splice(0,CHAT.length-200);saveChat();if(selKey&&!String(selKey).startsWith('npc:'))showSel();renderChatPanel()}
+function addChat(e){CHAT.push(e);if(($('chatPanel').hidden||CUR==='scrBar')&&e.id!==myPeerId()&&e.id!=='~me')setUnread(UNREAD+1);if(CHAT.length>200)CHAT.splice(0,CHAT.length-200);saveChat();if(selKey&&!String(selKey).startsWith('npc:'))showSel();renderChatPanel()}
 function hhmmOf(t){const d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
 function renderChatPanel(){
   const p=$('chatPanel');if(!p||p.hidden)return;
