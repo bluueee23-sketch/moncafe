@@ -972,6 +972,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
       <div class="ledger" id="ledger"></div>
       <div class="signact">
         <button class="sbtn" id="rosterBtn" title="이번 주 근무표 (출근 도장, 공부 시간)">근무표</button>
+        <button class="sbtn" id="hopBtn" hidden></button>
         <button class="sbtn gold" id="storeBtn">우리 매장 열기</button>
       </div>
     </div>
@@ -2209,6 +2210,18 @@ function jdInit(){
 let AUTOBREW=null,AB=null;
 const SALT='박소금',AB_MAKE=6000,AB_DELIVER=4500;
 const isSalt=()=>typeof nick==='string'&&nick.trim()===SALT;
+/* 누가 만들어 주나: 공개 매장은 다들 아는 박소금, 우리 매장은 점장이 만들어 줘요 */
+const inStore=()=>typeof IN_STORE!=='undefined'&&IN_STORE;
+function barStaff(){
+  if(!inStore())return{name:SALT,badge:'직원',who:SALT+'이',self:isSalt(),look:SALT_LOOK};
+  const m=typeof META!=='undefined'&&META,own=m&&m.owner,me=typeof amOwner==='function'&&amOwner();
+  let look=null;
+  try{const p=PEOPLE.find(e=>!e.isNpc&&!e.isStaff&&e.peer===own);if(p&&p.pr&&p.pr.look)look=p.pr.look}catch(e){}
+  if(!look&&own&&typeof ROSTER!=='undefined'&&ROSTER[own]&&ROSTER[own].look)look=ROSTER[own].look;
+  if(!look&&me)try{look=lookOut()}catch(e){}
+  const nm=(m&&m.ownerName)||'점장';
+  return{name:nm,badge:'점장',who:'점장이',self:me,look:look||SALT_LOOK,talk:'점장 '+nm};
+}
 // 지금까지 내가 마신(손님 것 말고) 음료 중 제일 많이 마신 것. 아직 없으면 자바칩 프라푸치노
 function favDrink(){
   const cnt={};for(const k in DB.days)for(const c of DB.days[k].cups||[])if(!c.guest)cnt[c.n]=(cnt[c.n]||0)+1;
@@ -2217,24 +2230,24 @@ function favDrink(){
 }
 function autoBrewLabel(){
   const el=$('autoBrewLbl'),sub=$('autoBrewSub');if(!el)return;
-  const f=favDrink();el.textContent='늘 먹던 걸로';
-  if(sub)sub.textContent=f.n?`${f.r.n} · ${isSalt()?'내가 바로 만들기':SALT+'이 만들어 줘요'}`:`첫 잔은 ${f.r.n} · ${SALT}`;
-  $('autoBrew').title=f.n?`최애 음료 ${f.r.n}(${f.n}잔째)를 ${SALT}이 만들어서 자리로 가져다줘요`:`아직 최애 음료가 없어서 ${SALT}의 자바칩 프라푸치노로 줘요`;
+  const f=favDrink(),b=barStaff();el.textContent='늘 먹던 걸로';
+  if(sub)sub.textContent=`${f.n?'':'첫 잔은 '}${f.r.n} · ${b.self?'내가 바로 만들기':b.who+' 만들어 줘요'}`;
+  $('autoBrew').title=f.n?`최애 음료 ${f.r.n}(${f.n}잔째)를 ${b.who} 만들어서 자리로 가져다줘요`:`아직 최애 음료가 없어서 자바칩 프라푸치노를 ${b.who} 만들어 줘요`;
 }
 function autoBrew(){
   if(typeof ev==='function')ev('autobrew');
   if(CUR==='scrStudy'&&S.running){toast('공부 중엔 시킬 수 없어요. 타이머를 멈추거나 휴게를 끝내요.');return}
   if(AUTOBREW)return;
-  const r=favDrink().r,now=Date.now(),self=isSalt();
+  const r=favDrink().r,now=Date.now(),B=barStaff(),self=B.self,who=B.talk||B.name;
   AUTOBREW={until:now+AB_MAKE,self,d:r.id};AB=self?null:{until:now+AB_MAKE,del:now+AB_MAKE+AB_DELIVER,d:r.id};
   $('autoBrew').disabled=true;
-  toast(self?`늘 먹던 ${r.n}, 바로 만드는 중…`:`${SALT}: 늘 드시던 ${r.n}요? 금방 갖다드릴게요!`);
+  toast(self?`늘 먹던 ${r.n}, 바로 만드는 중…`:`${who}: 늘 드시던 ${r.n}요? 금방 갖다드릴게요!`);
   syncPresence();lastSig='';renderFriends();
   setTimeout(()=>{
     AUTOBREW=null;$('autoBrew').disabled=false;
     const i=ideal(r);MADE={r,kind:i.kind,L:i.L,ice:i.ice,st:3,idx:-1,left:1};
     const d=day();d.cups.push({n:r.n,st:3,at:hhmm(),guest:null,tip:0,min:0,ordered:1});save();MADE.idx=d.cups.length-1;saveCup();
-    renderLedger();toast(self?`${r.n} 완성! 자리로 가져갈게요.`:`${SALT}: 주문하신 ${r.n} 나왔습니다~`);openStudy();
+    renderLedger();toast(self?`${r.n} 완성! 자리로 가져갈게요.`:`${who}: 주문하신 ${r.n} 나왔습니다~`);openStudy();
     setTimeout(()=>{if(AB&&Date.now()>=AB.del){AB=null;syncPresence();lastSig='';renderFriends()}},AB_DELIVER+200);
   },AB_MAKE);
 }
@@ -2360,9 +2373,9 @@ async function renderFriends(){
     // 박소금 직원: 누가 시키면 바에서 만들고, 다 되면 그 사람 자리로 가져가요
     {const now=Date.now(),sl=ppl.find(e=>!e.isNpc&&typeof e.pr.nick==='string'&&e.pr.nick.trim()===SALT);
      if(sl&&sl.pr.look){SALT_LOOK=sl.pr.look;try{localStorage.setItem('barista.saltLook',JSON.stringify(sl.pr.look))}catch(_){}}
-     STAFF=[];const used=new Set(ppl.filter(e=>e.bar!=null).map(e=>e.bar));
+     const BS=barStaff();STAFF=[];const used=new Set(ppl.filter(e=>e.bar!=null).map(e=>e.bar));
      for(const e of ppl){const ab=e.pr.ab;if(!Array.isArray(ab)||!(ab[1]>now))continue;
-       const making=now<ab[0],ad=byId(ab[2])?ab[2]:'jc',an=byId(ad).n,en=(typeof e.pr.nick==='string'&&e.pr.nick.trim()?e.pr.nick.trim().slice(0,12):'손님');const st={key:'staff:'+e.key,isStaff:true,peer:'staff',name:SALT,for:e,pr:{look:SALT_LOOK,st:'making',d:ad}};
+       const making=now<ab[0],ad=byId(ab[2])?ab[2]:'jc',an=byId(ad).n,en=(typeof e.pr.nick==='string'&&e.pr.nick.trim()?e.pr.nick.trim().slice(0,12):'손님');const st={key:'staff:'+e.key,isStaff:true,badge:BS.badge,peer:'staff',name:BS.name,for:e,pr:{look:BS.look,st:'making',d:ad}};
        if(making){const b=[0,1].find(i=>!used.has(i));if(b==null)continue;used.add(b);st.bar=b;st.bub=(e.isMe?'늘 드시던 ':en+'님 늘 먹던 ')+an+' 만드는 중…';st.bubS=an+' 만드는 중…'}
        else{if(e.seat==null||e.seat<0)continue;st.to=e.seat;st.bub=(e.isMe?'주문하신 ':en+'님, ')+an+' 나왔습니다~';st.bubS='배달 왔어요~'}
        STAFF.push(st)}}
@@ -2499,7 +2512,7 @@ function hudPerson(e,x,headY,nameY,hit,side){
   const pop=lastBub[e.key]!==e.bub;lastBub[e.key]=e.bub;
   const kind=e.isNpc?' ai':e.isStaff?' staffb':e.say?' say':' st';
   return (e.bub?`<span class="bub hb ${side||'mid'}${kind}${pop?' pop':''}" style="${pct(x,headY)}"><span class="lg">${esc(e.bub)}</span><span class="sh">${esc(e.bubS)}</span></span>`:'')+
-    `<span class="hname${e.isMe?' me':''}${e.isStaff?' staff':e.isNpc?' npc':' human'}" style="${pct(Math.min(Math.max(x,VX+70),VX+VBW-70),nameY)};max-width:${((116*TS-10)/VBW*100).toFixed(2)}%"><span class="nl">${e.isStaff?'<i class="aib stf">직원</i>':e.isNpc?'<i class="aib">AI</i>':'<i class="dot"></i>'+(typeof isOwnerPeer==='function'&&isOwnerPeer(e.peer)?'<i class="aib own">점장</i>':'')}<b class="nm">${esc(e.name)}</b>${!e.isNpc&&!e.isMe&&!e.isStaff?friendHearts(e.peer):''}</span>${e.isStaff?'':`<span class="ftime" data-k="${esc(e.key)}"></span>`}</span>`+(e.isStaff?'':
+    `<span class="hname${e.isMe?' me':''}${e.isStaff?' staff':e.isNpc?' npc':' human'}" style="${pct(Math.min(Math.max(x,VX+70),VX+VBW-70),nameY)};max-width:${((116*TS-10)/VBW*100).toFixed(2)}%"><span class="nl">${e.isStaff?`<i class="aib stf">${e.badge||'직원'}</i>`:e.isNpc?'<i class="aib">AI</i>':'<i class="dot"></i>'+(typeof isOwnerPeer==='function'&&isOwnerPeer(e.peer)?'<i class="aib own">점장</i>':'')}<b class="nm">${esc(e.name)}</b>${!e.isNpc&&!e.isMe&&!e.isStaff?friendHearts(e.peer):''}</span>${e.isStaff?'':`<span class="ftime" data-k="${esc(e.key)}"></span>`}</span>`+(e.isStaff?'':
     `<button class="hhit${selKey===e.key?' sel':''}" data-k="${esc(e.key)}" aria-label="${esc(e.name+': '+e.bub)}" style="${box(hit[0],hit[1],hit[2],hit[3])}"></button>`);
 }
 function drawFloor(taken){
@@ -2700,6 +2713,7 @@ addEventListener('resize',fitHall);fitHall();jdInit();
 .sign-right{display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap;justify-content:flex-end}
 .signact{display:flex;gap:6px}
 .sbtn{border:1.5px solid rgba(255,240,214,.55);background:rgba(255,248,236,.12);color:var(--sign-ink,#FFF4E2);border-radius:99px;padding:4px 12px;font-family:var(--display);font-size:14px;line-height:1.3;white-space:nowrap}
+#hopBtn{max-width:9em;overflow:hidden;text-overflow:ellipsis}
 .sbtn:hover{background:rgba(255,248,236,.24)}
 .sbtn.gold{background:#F2C46B;border-color:#F2C46B;color:#4A2F14;box-shadow:0 2px 0 #B98A35}
 .sbtn.gold:hover{background:#F6D184}
@@ -2822,16 +2836,19 @@ function clockIn(){
 
 /* ---------- 간판: 매장 이름, 버튼 ---------- */
 function paintSign(){
-  const h=$('cafeName'),sb=$('storeBtn');if(!h||!sb)return;
+  const h=$('cafeName'),sb=$('storeBtn'),hop=$('hopBtn');if(!h||!sb)return;
   if(IN_STORE){
     const t=(META&&META.title)||(STORES[RM]&&STORES[RM].title)||RM.replace(/-[a-z0-9]{4}$/,'');
     if(document.activeElement!==h)h.textContent=t;
     h.setAttribute('contenteditable',amOwner()?'true':'false');
     h.title=amOwner()?'점장만 매장 이름을 바꿀 수 있어요. 눌러서 바꾸기':(META&&META.ownerName?`점장 ${META.ownerName}님의 매장`:'우리 매장');
     sb.textContent='초대하기';sb.classList.remove('glow');
+    hop.hidden=false;hop.textContent='공개 매장';hop.title='누구나 오는 공개 매장으로 가기 (박소금이 있는 곳)';hop.onclick=()=>{location.href=location.pathname};
     document.title=t+' · 오늘의 바리스타';
   }else{
     sb.textContent='우리 매장 열기';
+    const last=Object.entries(STORES).filter(([k])=>k!=='main').sort((a,b)=>(b[1].last||0)-(a[1].last||0))[0];
+    hop.hidden=!last;if(last){hop.textContent=last[1].title||'내 매장';hop.title=`"${last[1].title||last[0]}" 매장으로 출근하기`;hop.onclick=()=>{location.href='?room='+encodeURIComponent(last[0])}}
     let seen=false;try{seen=localStorage.getItem('barista.storeSeen')==='1'}catch(e){}
     sb.classList.toggle('glow',!seen&&!Object.keys(STORES).length);
   }
@@ -3090,7 +3107,7 @@ function applyStore(m){
       else if(STORES[RM]&&STORES[RM].meta)ROOM.act({a:'metaseed',meta:STORES[RM].meta});
       else ROOM.act({a:'meta',guess:1,title:RM.replace(/-[a-z0-9]{4}$/,'').slice(0,20)||'우리 매장',goal:10}); // 주소만 아는 매장: 처음 온 사람이 (임시) 점장
     }
-    paintSign();lastSig='';renderFriends();
+    paintSign();lastSig='';renderFriends();try{autoBrewLabel()}catch(e){}
   }else if(m.t==='roster'){
     const srv={};for(const e of m.list||[])if(e&&e.id)srv[e.id]=e;
     if(!rosterSeeded){rosterSeeded=true;
