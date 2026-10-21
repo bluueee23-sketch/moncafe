@@ -2452,6 +2452,19 @@ addEventListener('resize',fitHall);fitHall();jdInit();
 
 <script>
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+/* 새 버전이 배포되면 알아서 새로고침해요. 음료 만드는 중이거나 채팅을 치는 중이면 끝날 때까지 기다려요(타이머는 localStorage로 이어져요). */
+(function(){
+  if(!location.protocol.startsWith('http'))return;
+  let base=null,pending=false;
+  const ver=()=>fetch('sw.js?v='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{const m=t.match(/VERSION\s*=\s*'([^']+)'/);return m?m[1]:null}).catch(()=>null);
+  const busy=()=>{try{if(CUR==='scrBar')return true}catch(e){}const a=document.activeElement;return !!(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA')&&a.value)};
+  const tryReload=()=>{if(!pending)return;if(busy())return;try{if(typeof saveStudy==='function')saveStudy()}catch(e){}location.reload()};
+  const check=()=>ver().then(v=>{if(!v)return;if(base===null){base=v;return}if(v!==base){pending=true;tryReload()}});
+  check();
+  setInterval(()=>{pending?tryReload():check()},90*1000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)pending?tryReload():check()});
+  setInterval(tryReload,3000);
+})();
 </script>
 </body>
 </html>
