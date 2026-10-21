@@ -959,6 +959,32 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
 @keyframes twinkle{0%,100%{opacity:.3;transform:scale(.6) rotate(0)}50%{opacity:1;transform:scale(1.15) rotate(20deg)}}
 @keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(242,184,59,.0)}50%{box-shadow:0 0 0 4px rgba(242,184,59,.35)}}
 @media (prefers-reduced-motion:reduce){#mmBox .ssp i,#mmBox summary.sparkle{animation:none}}
+
+/* ===== 이름표는 한 줄로 (넘치면 JS가 글씨를 줄임) ===== */
+.hname .nm{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-line-clamp:unset;line-height:1.3}
+.hname .ftime{white-space:nowrap}
+@container (max-width:620px){
+  .hname{padding:0 .4em}
+  .hname .nl>.dot{position:absolute;left:-2px;top:-2px;margin:0;width:6px;height:6px}
+  .hname .nl>.aib:not(.own){position:absolute;left:-4px;top:0;transform:translateY(-62%);margin:0;font-size:6px;padding:0 .3em;line-height:1.4;pointer-events:none}
+}
+/* ===== 내 캐릭터: 열려 있을 때 반짝임 상태에서도 글씨 보이게 ===== */
+#mmBox[open] summary.sparkle{color:#5A3A1C!important}
+#mmBox[open] summary.sparkle::after{color:#5A3A1C}
+.mmleft{flex:none;display:flex;flex-direction:column;align-items:center;gap:8px}
+.mmdone{display:none}
+/* ===== 폰/세로 화면: 아래에서 올라오는 시트, 매장은 위에 그대로 보이게 ===== */
+@media (max-width:819px), (max-aspect-ratio:799/1000){
+  .mm .mmbody{position:fixed;left:8px;right:8px;bottom:8px;top:auto;width:auto;z-index:60;
+    max-height:min(46vh,420px);overflow:auto;overscroll-behavior:contain;flex-wrap:nowrap;align-items:flex-start;gap:12px;padding:12px;
+    box-shadow:0 -6px 28px rgba(40,30,20,.28);border-radius:16px}
+  .mmleft{position:sticky;top:0}
+  .mm .mmprev{margin:0;padding:8px 10px}
+  .mm .mmprev svg{width:62px;height:88px}
+  .mmdone{display:inline-flex;justify-content:center;width:100%;font-weight:700;background:var(--ink);color:var(--surface);border-color:var(--ink)}
+  .mmside{gap:8px}
+  body.mmopen{padding-bottom:min(46vh,420px)}
+}
 </style>
 
 <div class="app" id="app" data-sky="day" data-scr="scrMenu">
@@ -989,7 +1015,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
         <details class="mm" id="mmBox">
           <summary>내 캐릭터<span class="ssp" aria-hidden="true"><i>✦</i><i>✧</i><i>✦</i><i>✧</i></span></summary>
           <div class="mmbody">
-            <div class="mmprev" id="mmPrev"></div>
+            <div class="mmleft"><div class="mmprev" id="mmPrev"></div><button type="button" class="mini mmdone" id="mmDone">완료</button></div>
             <div class="mmside">
               <label class="nick" for="nick">이름표 <input id="nick" maxlength="12" placeholder="이름 입력"></label>
               <div class="mmopts" id="mmOpts"></div>
@@ -1646,6 +1672,11 @@ let STAFF=[],SALT_LOOK=(()=>{try{return JSON.parse(localStorage.getItem('barista
 let ROOM=null,USER=null,roomDead=false,names={},seenCheer={},nick='',tTimer=0;
 try{nick=localStorage.getItem('barista.nick')||''}catch(e){}
 $('nick').value=nick;
+(()=>{const box=$('mmBox'),mq=matchMedia('(max-width:819px), (max-aspect-ratio:799/1000)');
+  box.addEventListener('toggle',()=>{const on=box.open&&mq.matches;document.body.classList.toggle('mmopen',on);
+    if(on)requestAnimationFrame(()=>{const h=document.querySelector('.hallwrap');if(h)window.scrollTo({top:Math.max(0,h.getBoundingClientRect().top+window.scrollY-6),behavior:'smooth'})})});
+  $('mmDone').addEventListener('click',()=>{box.open=false});
+})();
 const markMm=()=>{const sm=document.querySelector('#mmBox summary');if(sm)sm.classList.toggle('sparkle',needName())};setTimeout(markMm,0);
 $('nick').addEventListener('change',()=>{setTimeout(markMm,0);setTimeout(autoBrewLabel,0);nick=$('nick').value.trim().slice(0,12);try{localStorage.setItem('barista.nick',nick)}catch(e){}syncPresence();renderFriends()});
 const byId=id=>R.find(r=>r.id===id);
@@ -2385,7 +2416,7 @@ async function renderFriends(){
     }
     PEOPLE=ppl;
     const sig=(typeof META!=='undefined'&&META?META.owner:'')+JSON.stringify(STAFF.map(e=>[e.key,e.bar,e.to]))+JSON.stringify(ppl.map(e=>[e.key,e.seat,e.bar,e.isNpc||e.isMe?0:friendLv(e.peer).lv,e.rem!=null&&e.pr.st==='study',e.name,e.pr.look,e.bub,e.say,e.pr.d,e.pr.st,Math.round((leftOf(e)??0)*20)]))+selKey;
-    if(sig!==lastSig){lastSig=sig;drawFloor(taken)}
+    if(sig!==lastSig){lastSig=sig;drawFloor(taken);fitNames()}
     tickTimes();
     const others=real-1,nN=ppl.length-real;
     $('fCount').textContent=real+'명'+(nN?` · 손님 ${nN}`:'');
@@ -2396,6 +2427,15 @@ async function renderFriends(){
     if(selKey&&!ppl.some(e=>e.key===selKey)){selKey=null;$('fSel').hidden=true}
   }finally{rendering=false;if(again){again=false;renderFriends()}}
 }
+/* 이름표: 한 줄로. 넘치면 글씨를 줄이고(최소 6px), 그래도 넘치면 … */
+function fitNames(){
+  document.querySelectorAll('#hud .hname .nm').forEach(el=>{
+    el.style.fontSize='';let fs=parseFloat(getComputedStyle(el).fontSize),n=0;
+    while(el.scrollWidth>el.clientWidth+0.5&&fs>5.5&&n++<30){fs-=0.5;el.style.fontSize=fs+'px'}
+  });
+}
+try{let ft;new ResizeObserver(()=>{clearTimeout(ft);ft=setTimeout(fitNames,60)}).observe(document.getElementById('hall'))}catch(_){}
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>fitNames());
 function tickTimes(){
   document.querySelectorAll('.ftime').forEach(el=>{
     const e=PEOPLE.find(x=>x.key===el.dataset.k);if(!e)return;
