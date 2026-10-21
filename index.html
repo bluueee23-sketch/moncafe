@@ -52,8 +52,11 @@ img{max-width:100%}
 .chatlog .ln span{background:#2F7A5A;color:#fff;border-radius:9px;padding:1px 8px;word-break:break-all}
 .chatlog .empty{color:var(--muted)}
 
-.chatpanel{position:absolute;right:12px;top:10px;z-index:7;width:min(340px,calc(100% - 24px));max-height:min(420px,calc(100% - 80px));display:flex;flex-direction:column;
-  background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 32px rgba(40,30,20,.22);overflow:hidden}
+.chatpanel{position:relative;margin-top:12px;height:230px;display:flex;flex-direction:column;
+  background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.chatpanel[hidden]{display:none}
+.cp-list{flex:1;min-height:0}
+.cp-top{padding:7px 12px!important}
 .cp-top{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line)}
 .cp-list{overflow:auto;padding:8px 12px 12px;display:flex;flex-direction:column;gap:6px;font-size:13px}
 .cp-ln{display:grid;grid-template-columns:auto auto 1fr;gap:6px;align-items:baseline}
@@ -63,6 +66,7 @@ img{max-width:100%}
 .cp-ln.mine b{color:var(--mine,#C2577A)}
 .cp-ln.mine span{background:var(--mine,#C2577A)}
 #chatBtn{position:relative}
+.app.chat-on #sayIn,.app.chat-on #sayGo{display:none}
 .unread{font-style:normal;position:absolute;top:-6px;right:-6px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#E0475B;color:#fff;font-size:10.5px;font-weight:800;line-height:17px;text-align:center;box-shadow:0 0 0 2px var(--surface)}
 .cp-in{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--line)}
 .cp-in input{flex:1;min-width:0;border:1px solid var(--line);border-radius:99px;padding:6px 12px;font:inherit;font-size:13px;background:var(--surface);color:var(--ink)}
@@ -571,9 +575,10 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
 @media (min-width:820px){
   html,body{height:100%}
   .app{max-width:1720px;height:100%;box-sizing:border-box;padding-block:12px;display:grid;
-    grid-template-columns:minmax(0,1fr) clamp(330px,34vw,470px);grid-template-rows:auto auto minmax(0,1fr);column-gap:16px}
+    grid-template-columns:minmax(0,1fr) clamp(330px,34vw,470px);grid-template-rows:auto auto minmax(0,1fr) auto;column-gap:16px}
+  .app > #chatPanel{grid-column:2;grid-row:4;height:clamp(190px,30vh,320px)}
   .awning,.sign{grid-column:1/-1}
-  .app > .friends{grid-column:1;grid-row:3;display:flex;flex-direction:column;min-height:0;margin-top:14px}
+  .app > .friends{grid-column:1;grid-row:3/5;display:flex;flex-direction:column;min-height:0;margin-top:14px}
   .app > #scrMenu,.app > #scrBar,.app > #scrDone,.app > #scrStudy{grid-column:2;grid-row:3;min-height:0;overflow:auto;margin-top:14px;padding-right:4px;scrollbar-width:thin}
   .hallscroll{flex:1;min-height:0;display:flex;justify-content:center;align-items:flex-start;background:var(--surface)}
   .hall{flex:none}
@@ -821,7 +826,8 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
       <h3>오늘의 매장 <span class="fcount" id="fCount">1명</span><span class="legend"><i class="dot"></i>사람 <i class="aib">AI</i>손님</span></h3>
       <div class="fhr">
         <button class="mini" id="chatBtn" aria-pressed="false">채팅<i class="unread" id="unread" hidden></i></button>
-        <button class="mini" id="quietBtn" aria-pressed="false">알림음 5분 끄기</button>
+        <button class="mini" id="bgmBtn" aria-pressed="true" title="카페 배경음">♪ 켜짐</button>
+        <button class="mini" id="quietBtn" aria-pressed="false">알림 5분 끄기</button>
         <button class="mini" id="pickSeat" aria-pressed="false">자리 옮기기</button>
         <details class="mm" id="mmBox">
           <summary>내 캐릭터</summary>
@@ -850,7 +856,6 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
       </div>
       <p class="fempty" id="fEmpty"></p>
       <div class="fsel" id="fSel" hidden></div>
-      <div class="chatpanel" id="chatPanel" hidden></div>
       <div class="adcard" id="adCard" hidden></div>
       <div class="saybar">
         <input id="sayIn" maxlength="100" placeholder="매장 채팅 (머리 위 말풍선으로도 떠요)">
@@ -859,6 +864,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
       </div>
     </div>
   </section>
+  <div class="chatpanel" id="chatPanel" hidden></div>
 
   <!-- MENU -->
   <section id="scrMenu">
@@ -1272,7 +1278,7 @@ $('sStop').onclick=()=>{
   if(MADE&&!S.done&&elapsed()>0){MADE.left=Math.max(.1,1-.9*Math.min(1,elapsed()/(S.dur*60)));saveCup()}
   clearInterval(sT);S.running=false;releaseWake();
   nextGuestAt=0;guestLeft=null;if(SERVE){clearTimeout(serveT);finishServe()}
-  if(m>0&&!S.done)logFocus(m);stopNoise();show('scrMenu');renderMenu();
+  if(m>0&&!S.done)logFocus(m);show('scrMenu');renderMenu();
 };
 function releaseWake(){try{wake&&wake.release()}catch(e){}wake=null}
 function logFocus(m){const d=day();d.focus+=m;const c=d.cups[MADE.idx];if(c)c.min=(c.min||0)+m;save();renderLedger()}
@@ -1282,7 +1288,7 @@ function complete(restoreBrk){
   $('sNote').hidden=true;const d=$('sDone');d.hidden=false;
   S.brk=restoreBrk||Date.now()+300000;clearInterval(sT);sT=setInterval(renderStudy,500);
   d.innerHTML=`<h3>한 잔 다 마셨다! ${S.dur}분 집중 완료</h3><p id="brkLine">오늘 총 ${day().focus}분 공부했어요. 지금부터 5분 쉬는 시간이에요. 스트레칭 한 번!</p><div class="acts"><button class="btn" id="fMore">다음 잔 만들러 가기</button><button class="btn ghost" id="fRefill">같은 잔 리필</button></div>`;
-  $('fMore').onclick=()=>{S.brk=0;clearInterval(sT);stopNoise();show('scrMenu');renderMenu()};
+  $('fMore').onclick=()=>{S.brk=0;clearInterval(sT);show('scrMenu');renderMenu()};
   $('fRefill').onclick=()=>{clearInterval(sT);S={dur:S.dur,elapsed:0,start:0,running:false,done:false};MADE.left=1;saveCup();$('sDone').hidden=true;$('sNote').hidden=false;renderChips();renderStudy()};
   renderChips();renderStudy();syncPresence();saveStudy();
 }
@@ -1415,13 +1421,21 @@ function startNoise(){const a=ac();if(!a)return;a.resume&&a.resume();
   for(let i=0;i<len;i++){const w=Math.random()*2-1;last=(last+.02*w)/1.02;d[i]=last*3.2}
   const src=a.createBufferSource();src.buffer=buf;src.loop=true;
   const lp=a.createBiquadFilter();lp.type='lowpass';lp.frequency.value=900;
-  const g=a.createGain();g.gain.value=.35;src.connect(lp).connect(g).connect(a.destination);src.start();
+  const g=a.createGain();g.gain.value=.22;src.connect(lp).connect(g).connect(a.destination);src.start();
   const clink=setInterval(()=>{if(Math.random()<.35){const o=a.createOscillator(),gg=a.createGain();o.frequency.value=2200+Math.random()*1800;
     gg.gain.setValueAtTime(.025,a.currentTime);gg.gain.exponentialRampToValueAtTime(.0005,a.currentTime+.4);o.connect(gg).connect(a.destination);o.start();o.stop(a.currentTime+.45)}},2500);
-  noise={src,clink};$('sNoise').textContent='카페 소음 끄기';$('sNoise').setAttribute('aria-pressed','true');
+  noise={src,clink};noiseUI();
 }
-function stopNoise(){if(noise){try{noise.src.stop()}catch(e){}clearInterval(noise.clink);noise=null}$('sNoise').textContent='카페 소음 켜기';$('sNoise').setAttribute('aria-pressed','false')}
-$('sNoise').onclick=()=>noise?stopNoise():startNoise();
+function noiseUI(){const on=!!noise;$('sNoise').textContent=on?'카페 소음 끄기':'카페 소음 켜기';$('sNoise').setAttribute('aria-pressed',String(on));
+  const b=$('bgmBtn');if(b){b.textContent=on?'♪ 켜짐':'♪ 꺼짐';b.setAttribute('aria-pressed',String(on))}}
+function stopNoise(){if(noise){try{noise.src.stop()}catch(e){}clearInterval(noise.clink);noise=null}noiseUI()}
+let BGM=true;try{BGM=localStorage.getItem('barista.bgm')!=='0'}catch(e){}
+function setBgm(on){BGM=on;try{localStorage.setItem('barista.bgm',on?'1':'0')}catch(e){}if(on){if(!noise)startNoise()}else stopNoise()}
+$('sNoise').onclick=()=>setBgm(!noise);
+// browsers only allow sound after the first tap or key, so the café sound starts then
+{const kick=()=>{removeEventListener('pointerdown',kick,true);removeEventListener('keydown',kick,true);if(BGM&&!noise)startNoise()};
+  addEventListener('pointerdown',kick,true);addEventListener('keydown',kick,true);}
+setTimeout(()=>{const b=$('bgmBtn');if(b){b.onclick=()=>setBgm(!noise);if(!BGM)noiseUI()}},0);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.running)renderStudy()});
 
 /* ---------- friends (room) ---------- */
@@ -1772,7 +1786,7 @@ function renderChatPanel(){
     p.textContent='';
     const top=document.createElement('div');top.className='cp-top';
     const h=document.createElement('b');h.textContent='매장 채팅';
-    const x=document.createElement('button');x.className='mini';x.textContent='닫기';x.onclick=()=>{p.hidden=true;$('chatBtn').setAttribute('aria-pressed','false')};
+    const x=document.createElement('button');x.className='mini';x.textContent='닫기';x.onclick=()=>setChat(false);
     top.append(h,x);p.appendChild(top);
     list=document.createElement('div');list.className='cp-list';p.appendChild(list);
     const f=document.createElement('form');f.className='cp-in';
@@ -2009,8 +2023,11 @@ function heardFrom(e){
   if(!e.say||MUTED.has(e.peer)||Date.now()<QUIET)return;chime();
 }
 function quietLabel(){const b=$('quietBtn');if(!b)return;const left=QUIET-Date.now();
-  b.textContent=left>0?`조용히 ${mmss(Math.ceil(left/1000))} · 해제`:'알림음 5분 끄기';b.setAttribute('aria-pressed',String(left>0))}
-$('chatBtn').onclick=()=>{const p=$('chatPanel');p.hidden=!p.hidden;$('chatBtn').setAttribute('aria-pressed',String(!p.hidden));if(!p.hidden){setUnread(0);cpFocus=true}renderChatPanel()};
+  b.textContent=left>0?`조용히 ${mmss(Math.ceil(left/1000))} · 해제`:'알림 5분 끄기';b.setAttribute('aria-pressed',String(left>0))}
+function setChat(open,focus){const p=$('chatPanel');p.hidden=!open;$('app').classList.toggle('chat-on',open);$('chatBtn').setAttribute('aria-pressed',String(open));try{localStorage.setItem('barista.chat',open?'1':'0')}catch(e){}
+  if(open){setUnread(0);cpFocus=!!focus}renderChatPanel()}
+$('chatBtn').onclick=()=>setChat($('chatPanel').hidden,true);
+{let o=true;try{o=localStorage.getItem('barista.chat')!=='0'}catch(e){}setChat(o,false)}
 $('quietBtn').onclick=()=>{QUIET=QUIET>Date.now()?0:Date.now()+5*60*1000;saveMute();quietLabel();toast(QUIET?'5분 동안 동료 말풍선 알림음을 꺼요.':'알림음을 다시 켰어요.')};
 setInterval(quietLabel,1000);quietLabel();
 
