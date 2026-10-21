@@ -66,6 +66,15 @@ img{max-width:100%}
 .cp-ln.mine b{color:var(--mine,#C2577A)}
 .cp-ln.mine span{background:var(--mine,#C2577A)}
 #chatBtn{position:relative}
+#enterDoor{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:rgba(42,33,27,.42);backdrop-filter:blur(3px);cursor:pointer;animation:fadeIn .25s}
+#enterDoor .door{background:var(--surface);border:6px solid var(--oak2,#8A5A36);border-radius:90px 90px 18px 18px;padding:34px 30px 22px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;max-width:300px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+#enterDoor .bell{font-size:34px;animation:ring 1.6s ease-in-out infinite;transform-origin:50% 0}
+#enterDoor b{font-family:var(--display);font-weight:400;font-size:24px}
+#enterDoor p{margin:0;color:var(--muted);font-size:14px}
+#enterDoor .btn{margin-top:8px}
+#enterDoor small{color:var(--muted);font-size:11.5px}
+@keyframes ring{0%,60%,100%{transform:rotate(0)}10%{transform:rotate(14deg)}20%{transform:rotate(-12deg)}30%{transform:rotate(8deg)}40%{transform:rotate(-5deg)}}
+@keyframes fadeIn{from{opacity:0}}
 .app.chat-on #sayIn,.app.chat-on #sayGo{display:none}
 .unread{font-style:normal;position:absolute;top:-6px;right:-6px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#E0475B;color:#fff;font-size:10.5px;font-weight:800;line-height:17px;text-align:center;box-shadow:0 0 0 2px var(--surface)}
 .cp-in{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--line)}
@@ -1445,8 +1454,17 @@ let BGM=true;try{BGM=localStorage.getItem('barista.bgm')!=='0'}catch(e){}
 function setBgm(on){BGM=on;try{localStorage.setItem('barista.bgm',on?'1':'0')}catch(e){}if(on){if(!noise)startNoise()}else stopNoise()}
 $('sNoise').onclick=()=>setBgm(!noise);
 // browsers only allow sound after the first tap or key, so the café sound starts then
-{const kick=()=>{removeEventListener('pointerdown',kick,true);removeEventListener('keydown',kick,true);if(BGM&&!noise)startNoise()};
-  addEventListener('pointerdown',kick,true);addEventListener('keydown',kick,true);}
+{const kick=()=>{removeEventListener('pointerdown',kick,true);removeEventListener('keydown',kick,true);const d=$('enterDoor');if(d)d.remove();if(BGM&&!noise){startNoise();doorBell()}};
+  addEventListener('pointerdown',kick,true);addEventListener('keydown',kick,true);
+  // some browsers let a site you visit often play sound right away; otherwise ask for one tap at the door
+  if(BGM){const a=ac();if(a){try{a.resume()}catch(e){}
+    setTimeout(()=>{if(noise)return;
+      if(a.state==='running'){startNoise();removeEventListener('pointerdown',kick,true);removeEventListener('keydown',kick,true);return}
+      const d=document.createElement('div');d.id='enterDoor';d.setAttribute('role','dialog');d.setAttribute('aria-label','카페 입장');
+      d.innerHTML='<div class="door"><div class="bell">🔔</div><b>오늘의 바리스타</b><p>문을 열면 카페 소리가 같이 들려요</p><button class="btn">딸랑, 들어가기</button><small>소리는 위쪽 ♪ 버튼으로 언제든 끌 수 있어요</small></div>';
+      document.body.appendChild(d)},350)}}}
+function doorBell(){const a=ac();if(!a)return;[1568,2093,1760].forEach((fq,i)=>{const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+i*.09;o.type='triangle';o.frequency.value=fq;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.07,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+.9);o.connect(g).connect(a.destination);o.start(t);o.stop(t+1)})}
 setTimeout(()=>{const b=$('bgmBtn');if(b){b.onclick=()=>setBgm(!noise);if(!BGM)noiseUI()}},0);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.running)renderStudy()});
 
