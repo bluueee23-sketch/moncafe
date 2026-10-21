@@ -924,6 +924,10 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
 }
 @media (max-width:359px){#scrMenu .mcard .pr{display:none}}
 @media (max-width:819px){#scrMenu .bhbtns{display:grid;grid-template-columns:1fr 1fr;width:100%;gap:8px}#scrMenu .bhbtns .btn{width:100%;min-width:0;justify-content:center}#scrMenu .bhbtns .btn.ask{align-items:center;text-align:center}#scrMenu .bhbtns .btn{font-size:15px;padding:9px 8px;word-break:keep-all;line-height:1.2}#scrMenu .bhbtns .btn.ask small{word-break:keep-all}}
+/* 스팀 온도 막대: 글 상자 폭 끝까지 */
+#meterWrap{align-self:stretch;width:100%;box-sizing:border-box}
+#meterWrap .meter{height:18px}
+#meterWrap .meter-scale{margin-top:3px;gap:8px}
 </style>
 
 <div class="app" id="app" data-sky="day" data-scr="scrMenu">
