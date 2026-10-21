@@ -1400,10 +1400,11 @@ $('sStop').onclick=()=>{
 function releaseWake(){try{wake&&wake.release()}catch(e){}wake=null}
 function logFocus(m){const d=day();d.focus+=m;const c=d.cups[MADE.idx];if(c)c.min=(c.min||0)+m;save();renderLedger()}
 function complete(restoreBrk){
+  const endAt=S.running?S.start+Math.max(0,S.dur*60-S.elapsed)*1000:Date.now();
   S.elapsed=S.dur*60;S.done=true;S.running=false;clearInterval(sT);releaseWake();if(!restoreBrk){logFocus(S.dur);ding()}MADE.left=.1;saveCup();
   nextGuestAt=0;guestLeft=null;if(SERVE){clearTimeout(serveT);finishServe()}
   $('sNote').hidden=true;const d=$('sDone');d.hidden=false;
-  S.brk=restoreBrk||Date.now()+300000;clearInterval(sT);sT=setInterval(renderStudy,500);
+  S.brk=restoreBrk||Math.min(Date.now(),endAt)+300000;clearInterval(sT);sT=setInterval(renderStudy,500);
   d.innerHTML=`<h3>한 잔 다 마셨다! ${S.dur}분 집중 완료</h3><p id="brkLine">오늘 총 ${day().focus}분 공부했어요. 지금부터 5분 쉬는 시간이에요. 스트레칭 한 번!</p><div class="acts"><button class="btn" id="fMore">다음 잔 만들러 가기</button><button class="btn ghost" id="fRefill">같은 잔 리필</button></div>`;
   $('fMore').onclick=()=>{S.brk=0;clearInterval(sT);show('scrMenu');renderMenu()};
   $('fRefill').onclick=()=>{clearInterval(sT);S={dur:S.dur,elapsed:0,start:0,running:false,done:false};MADE.left=1;saveCup();$('sDone').hidden=true;$('sNote').hidden=false;renderChips();renderStudy()};
@@ -1606,10 +1607,18 @@ function presenceState(){
 }
 function syncPresence(){if(ROOM&&!roomDead)ROOM.presence(presenceState()).catch(()=>{});renderFriends()}
 function sendCheer(to,k,extra){if(!ROOM)return;ROOM.presence({cheer:Object.assign({to,k,at:Date.now()},extra||{})}).catch(()=>{})}
-function remOf(p){const pr=p.presence||{};if((pr.st==='study'||pr.st==='break')&&typeof pr.end==='number')return Math.max(0,Math.round((pr.end-Date.now())/1000));if(typeof pr.rem==='number')return pr.rem;return null}
+/* 친구 화면이 잠겨 있거나 앱 밖에 있으면 그쪽 타이머가 멈춰서 상태를 못 보내요.
+   공부 끝 시각이 지났으면 내 화면에서는 알아서 5분 쉬는 중으로, 그것도 지나면 다 마심으로 보여줘요. */
+function pres(p){
+  const pr=(p&&p.presence)||{},now=Date.now();
+  if(typeof pr.end!=='number'||pr.end>now||!(pr.st==='study'||(pr.st==='break'&&!pr.mid)))return pr;
+  const bEnd=pr.st==='study'?pr.end+300000:pr.end;
+  return bEnd>now?Object.assign({},pr,{st:'break',mid:false,end:bEnd,dur:5}):Object.assign({},pr,{st:'finished',end:null});
+}
+function remOf(p){const pr=pres(p);if((pr.st==='study'||pr.st==='break')&&typeof pr.end==='number')return Math.max(0,Math.round((pr.end-Date.now())/1000));if(typeof pr.rem==='number')return pr.rem;return null}
 const mmss=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
 function statusOf(p){
-  const pr=p.presence||{},r=byId(pr.d),dn=r?r.n:'';
+  const pr=pres(p),r=byId(pr.d),dn=r?r.n:'';
   switch(pr.st){
     case 'making':return['making','제조 중',dn+' 만드는 중'];
     case 'done':return['making','완성',dn+' 막 완성'];
@@ -1620,7 +1629,7 @@ function statusOf(p){
   }
 }
 function friendCup(p){
-  const pr=p.presence||{},r=byId(pr.d);if(!r)return cupSVG('icecup',[],{});
+  const pr=pres(p),r=byId(pr.d);if(!r)return cupSVG('icecup',[],{});
   const i=ideal(r);let f=1;
   if(pr.st==='study'||pr.st==='seat'){const s=remOf(p);if(s!=null&&pr.dur)f=1-.9*(1-s/(pr.dur*60))}
   if(pr.st==='finished'||pr.st==='break')f=.1;
@@ -2213,7 +2222,7 @@ async function renderFriends(){
     const ids=[...list.map(p=>p.by),meRoom&&meRoom.by].filter(Boolean);
     let prof={};if(USER&&ids.length){try{prof=await USER.profiles(ids)}catch(e){}}
     const ppl=[{key:'me',isMe:true,peer:meRoom?meRoom.peer:'~me',by:meRoom?meRoom.by:null,pr:presenceState()},
-      ...list.map(p=>({key:p.peer,isMe:false,peer:p.peer,by:p.by,pr:p.presence||{},raw:p}))];
+      ...list.map(p=>({key:p.peer,isMe:false,peer:p.peer,by:p.by,pr:pres(p),raw:p}))];
     // seats: same order on every screen, so everyone sees the same seating
     const atBar=ppl.filter(e=>e.pr.st==='making'||e.pr.st==='done').slice(0,2);atBar.forEach((e,i)=>e.bar=i);
     const taken={};
@@ -2465,7 +2474,7 @@ function stealDrink(e){
   if(CUR==='scrStudy'&&S.running){toast('지금 내 타이머가 돌아가는 중이에요. 다 마시고 뺏어먹어요!');return}
   if(!sitNext(e,true))return;
   const i=ideal(r);MADE={r,kind:i.kind,L:i.L,ice:i.ice,st:3,idx:-1,left:1};saveCup();
-  const p=ROOM&&ROOM.peers().find(x=>x.peer===e.peer),pr=(p&&p.presence)||{},rem=p?remOf(p):0;
+  const p=ROOM&&ROOM.peers().find(x=>x.peer===e.peer),pr=p?pres(p):{},rem=p?remOf(p):0;
   const join=pr.st==='study'&&rem>30;
   if(join)openStudy({dur:pr.dur,rem});else{openStudy();$('sGo').click()}
   sendCheer(e.peer,'steal',{d:r.id});addFriendMin(e.peer,e.name,1);
@@ -2536,8 +2545,8 @@ addEventListener('resize',fitHall);fitHall();jdInit();
   if(v.done){if(v.brk>Date.now())complete(v.brk);else{show('scrMenu');renderMenu();localStorage.removeItem('barista.study')}return}
   S.elapsed=Math.min(v.el,v.dur*60);
   if(v.brk>Date.now()){renderChips();startBreak(v.brk);toast('쉬는 시간 이어서 진행 중이에요.');return}
-  if(v.brk)v.run=true;else S.elapsed=Math.min(el,v.dur*60);
-  if(v.run){S.start=Date.now();S.running=true;clearInterval(sT);sT=setInterval(renderStudy,500);scheduleGuest(true)}
+  if(v.brk)v.run=true;
+  if(v.run){S.start=v.brk?Date.now():v.at;S.running=true;clearInterval(sT);sT=setInterval(renderStudy,500);scheduleGuest(true)}
   renderChips();renderStudy();syncPresence();
   if(!S.done)toast(v.run?'하던 공부 이어서 진행 중이에요.':'멈춰둔 공부가 그대로 있어요.');
 }catch(e){}})();
