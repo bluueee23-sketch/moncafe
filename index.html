@@ -6,6 +6,10 @@
 <title>오늘의 바리스타</title>
 <meta name="description" content="직접 만든 음료를 들고 카페 알바 동료들과 같이 공부하는 집중 타이머">
 <meta name="theme-color" content="#2F5D4C">
+<meta property="og:type" content="website">
+<meta property="og:title" content="오늘의 바리스타">
+<meta property="og:description" content="내가 만든 커피 한 잔 들고, 친구들과 같은 카페에 출근해서 공부해요">
+<meta property="og:image" content="/og.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -964,7 +968,13 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
       <span class="open">OPEN</span>
       <h1 id="cafeName" contenteditable="true" spellcheck="false" title="눌러서 카페 이름 바꾸기">나의 작은 카페</h1>
     </div>
-    <div class="ledger" id="ledger"></div>
+    <div class="sign-right">
+      <div class="ledger" id="ledger"></div>
+      <div class="signact">
+        <button class="sbtn" id="rosterBtn" title="이번 주 근무표 (출근 도장, 공부 시간)">근무표</button>
+        <button class="sbtn gold" id="storeBtn">우리 매장 열기</button>
+      </div>
+    </div>
   </header>
 
   <section class="friends" aria-label="카페 홀">
@@ -1020,7 +1030,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
           <h2>오늘의 메뉴</h2>
           <p>출근했으면 직원 음료부터! 한 잔 만들어 휴게석에 앉으면 공부 시작. 공부하는 동안 손님이 오면 내가 알아서 만들어 드리고 팁을 받아요.</p>
         </div>
-        <div class="bhbtns"><button class="btn crema" id="takeOrder">손님 주문 받기</button><button class="btn ask" id="autoBrew" title="귀찮을 땐 자바칩 프라푸치노를 자동으로 만들어 줘요"><span id="autoBrewLbl">박소금에게 시키기</span><small>자바칩 프라푸치노 · 자동</small></button></div>
+        <div class="bhbtns"><button class="btn crema" id="takeOrder">손님 주문 받기</button><button class="btn ask" id="autoBrew" title="내 최애 음료를 박소금이 만들어서 자리로 가져다줘요"><span id="autoBrewLbl">늘 먹던 걸로</span><small id="autoBrewSub">박소금이 만들어 줘요</small></button></div>
       </div>
       <div class="menu" id="menu"></div>
     </div>
@@ -1237,6 +1247,7 @@ function renderLedger(){
   // one line instead of the full journal: my most-drunk drink so far
   const cnt={};for(const k in DB.days)for(const c of DB.days[k].cups||[])if(!c.guest)cnt[c.n]=(cnt[c.n]||0)+1;
   const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0],rows=$('rows');
+  if(typeof autoBrewLabel==='function')setTimeout(autoBrewLabel,0);
   rows.innerHTML=top?`<span>내 최애 음료</span><b>${String(top[0]).replace(/[&<>]/g,'')}</b><span class="n">${top[1]}잔째</span>`:'<span>내 최애 음료</span><b>아직 없어요</b><span class="n">첫 잔을 만들어 볼까요?</span>';
 }
 function renderMenu(){
@@ -1248,7 +1259,7 @@ $('takeOrder').onclick=()=>{const RR=R.filter(x=>!x.special),r=RR[Math.random()*
 $('toMenu').onclick=()=>{stopLoops();show('scrMenu');renderMenu()};
 const nameEl=$('cafeName');nameEl.textContent=DB.name;
 nameEl.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();nameEl.blur()}});
-nameEl.addEventListener('blur',()=>{DB.name=nameEl.textContent.trim().slice(0,24)||'나의 작은 카페';nameEl.textContent=DB.name;save()});
+nameEl.addEventListener('blur',()=>{if(typeof storeRename==='function'&&storeRename(nameEl))return;DB.name=nameEl.textContent.trim().slice(0,24)||'나의 작은 카페';nameEl.textContent=DB.name;save()});
 
 /* ---------- bar ---------- */
 let C=null;
@@ -1446,7 +1457,7 @@ $('sGo').onclick=async()=>{
   if(S.done)return;
   if(S.brk){S.brk=0;S.running=false}
   if(S.running){S.elapsed=elapsed();S.running=false;clearInterval(sT);releaseWake();if(nextGuestAt)guestLeft=Math.max(0,nextGuestAt-Date.now())}
-  else{if(guestLeft!=null){nextGuestAt=Date.now()+guestLeft;guestLeft=null}else if(!nextGuestAt)scheduleGuest(true);S.start=Date.now();S.running=true;clearInterval(sT);sT=setInterval(renderStudy,500);try{wake=await navigator.wakeLock?.request('screen')}catch(e){}}
+  else{if(guestLeft!=null){nextGuestAt=Date.now()+guestLeft;guestLeft=null}else if(!nextGuestAt)scheduleGuest(true);if(typeof clockIn==='function')clockIn();S.start=Date.now();S.running=true;clearInterval(sT);sT=setInterval(renderStudy,500);try{wake=await navigator.wakeLock?.request('screen')}catch(e){}}
   renderChips();renderStudy();syncPresence();saveStudy();
 };
 $('sStop').onclick=()=>{
@@ -1464,7 +1475,7 @@ function complete(restoreBrk){
   nextGuestAt=0;guestLeft=null;if(SERVE){clearTimeout(serveT);finishServe()}
   $('sNote').hidden=true;const d=$('sDone');d.hidden=false;
   S.brk=restoreBrk||Math.min(Date.now(),endAt)+300000;clearInterval(sT);sT=setInterval(renderStudy,500);
-  d.innerHTML=`<h3>한 잔 다 마셨다! ${S.dur}분 집중 완료</h3><p id="brkLine">오늘 총 ${day().focus}분 공부했어요. 지금부터 5분 쉬는 시간이에요. 스트레칭 한 번!</p><div class="acts"><button class="btn" id="fMore">다음 잔 만들러 가기</button><button class="btn ghost" id="fRefill">같은 잔 리필</button></div>`;
+  d.innerHTML=`<h3>한 잔 다 마셨다! ${S.dur}분 집중 완료</h3><p id="brkLine">오늘 총 ${day().focus}분 공부했어요. 지금부터 5분 쉬는 시간이에요. 스트레칭 한 번!</p><div class="acts"><button class="btn" id="fMore">다음 잔 만들러 가기</button><button class="btn ghost" id="fRefill">같은 잔 리필</button><button class="btn ghost" id="fCard">출근 인증 카드</button></div>`;
   $('fMore').onclick=()=>{S.brk=0;clearInterval(sT);show('scrMenu');renderMenu()};
   $('fRefill').onclick=()=>{clearInterval(sT);S={dur:S.dur,elapsed:0,start:0,running:false,done:false};MADE.left=1;saveCup();$('sDone').hidden=true;$('sNote').hidden=false;renderChips();renderStudy()};
   renderChips();renderStudy();syncPresence();saveStudy();
@@ -1664,9 +1675,9 @@ $('machine').onclick=()=>{if(!canLeave())return;$('takeOrder').click()};
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(tTimer);tTimer=setTimeout(()=>e.classList.remove('on'),3800)}
 function myPeer(){return ROOM?ROOM.peers().find(p=>p.sameTab)?.peer:null}
 function presenceState(){
-  const d=day(),o={nick,cups:d.cups.length,focus:d.focus,st:'menu',d:null,dur:null,end:null,rem:null,seat:mySeat,sa:mySeatAt,say:mySay,look:lookOut()};
-  if(AUTOBREW&&AUTOBREW.self){o.st='making';o.d='jc';return o}
-  if(AB&&AB.del>Date.now())o.ab=[AB.until,AB.del];
+  const d=day(),o={nick,wk:typeof myWeek==='function'?myWeek():null,cups:d.cups.length,focus:d.focus,st:'menu',d:null,dur:null,end:null,rem:null,seat:mySeat,sa:mySeatAt,say:mySay,look:lookOut()};
+  if(AUTOBREW&&AUTOBREW.self){o.st='making';o.d=AUTOBREW.d||'jc';return o}
+  if(AB&&AB.del>Date.now())o.ab=[AB.until,AB.del,AB.d||'jc'];
   if(CUR==='scrMenu'&&MADE){o.st='hold';o.d=MADE.r.id;o.left=Math.round((MADE.left??1)*100)/100}
   else if(CUR==='scrBar'&&C){o.st='making';o.d=C.r.id}
   else if(CUR==='scrDone'&&MADE){o.st='done';o.d=MADE.r.id}
@@ -2194,24 +2205,36 @@ function jdInit(){
 }
 
 
-/* ---------- ask myself: the special Java chip frappuccino, made for me ---------- */
+/* ---------- "늘 먹던 걸로": 내 최애 음료를 직원 박소금이 만들어서 자리로 가져다줘요 ---------- */
 let AUTOBREW=null,AB=null;
 const SALT='박소금',AB_MAKE=6000,AB_DELIVER=4500;
 const isSalt=()=>typeof nick==='string'&&nick.trim()===SALT;
-function autoBrewLabel(){const el=$('autoBrewLbl');if(el)el.textContent=SALT+'에게 시키기'}
+// 지금까지 내가 마신(손님 것 말고) 음료 중 제일 많이 마신 것. 아직 없으면 자바칩 프라푸치노
+function favDrink(){
+  const cnt={};for(const k in DB.days)for(const c of DB.days[k].cups||[])if(!c.guest)cnt[c.n]=(cnt[c.n]||0)+1;
+  const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).find(([n])=>R.some(r=>r.n===n));
+  return{r:top?R.find(r=>r.n===top[0]):byId('jc'),n:top?top[1]:0};
+}
+function autoBrewLabel(){
+  const el=$('autoBrewLbl'),sub=$('autoBrewSub');if(!el)return;
+  const f=favDrink();el.textContent='늘 먹던 걸로';
+  if(sub)sub.textContent=f.n?`${f.r.n} · ${isSalt()?'내가 바로 만들기':SALT+'이 만들어 줘요'}`:`첫 잔은 ${f.r.n} · ${SALT}`;
+  $('autoBrew').title=f.n?`최애 음료 ${f.r.n}(${f.n}잔째)를 ${SALT}이 만들어서 자리로 가져다줘요`:`아직 최애 음료가 없어서 ${SALT}의 자바칩 프라푸치노로 줘요`;
+}
 function autoBrew(){
+  if(typeof ev==='function')ev('autobrew');
   if(CUR==='scrStudy'&&S.running){toast('공부 중엔 시킬 수 없어요. 타이머를 멈추거나 휴게를 끝내요.');return}
   if(AUTOBREW)return;
-  const r=byId('jc'),now=Date.now(),self=isSalt();
-  AUTOBREW={until:now+AB_MAKE,self};AB=self?null:{until:now+AB_MAKE,del:now+AB_MAKE+AB_DELIVER};
+  const r=favDrink().r,now=Date.now(),self=isSalt();
+  AUTOBREW={until:now+AB_MAKE,self,d:r.id};AB=self?null:{until:now+AB_MAKE,del:now+AB_MAKE+AB_DELIVER,d:r.id};
   $('autoBrew').disabled=true;
-  toast(self?'박소금(나)이 자바칩 프라푸치노 만드는 중…':'박소금이 바에서 자바칩 프라푸치노 만드는 중… 자리에서 기다려요');
+  toast(self?`늘 먹던 ${r.n}, 바로 만드는 중…`:`${SALT}: 늘 드시던 ${r.n}요? 금방 갖다드릴게요!`);
   syncPresence();lastSig='';renderFriends();
   setTimeout(()=>{
     AUTOBREW=null;$('autoBrew').disabled=false;
     const i=ideal(r);MADE={r,kind:i.kind,L:i.L,ice:i.ice,st:3,idx:-1,left:1};
     const d=day();d.cups.push({n:r.n,st:3,at:hhmm(),guest:null,tip:0,min:0,ordered:1});save();MADE.idx=d.cups.length-1;saveCup();
-    renderLedger();toast(self?'자바칩 프라푸치노 완성! 휴게석으로 가져갈게요.':'박소금: 주문하신 자바칩 프라푸치노 나왔습니다~');openStudy();
+    renderLedger();toast(self?`${r.n} 완성! 자리로 가져갈게요.`:`${SALT}: 주문하신 ${r.n} 나왔습니다~`);openStudy();
     setTimeout(()=>{if(AB&&Date.now()>=AB.del){AB=null;syncPresence();lastSig='';renderFriends()}},AB_DELIVER+200);
   },AB_MAKE);
 }
@@ -2339,9 +2362,9 @@ async function renderFriends(){
      if(sl&&sl.pr.look){SALT_LOOK=sl.pr.look;try{localStorage.setItem('barista.saltLook',JSON.stringify(sl.pr.look))}catch(_){}}
      STAFF=[];const used=new Set(ppl.filter(e=>e.bar!=null).map(e=>e.bar));
      for(const e of ppl){const ab=e.pr.ab;if(!Array.isArray(ab)||!(ab[1]>now))continue;
-       const making=now<ab[0];const st={key:'staff:'+e.key,isStaff:true,peer:'staff',name:SALT,for:e,pr:{look:SALT_LOOK,st:'making',d:'jc'}};
-       if(making){const b=[0,1].find(i=>!used.has(i));if(b==null)continue;used.add(b);st.bar=b;st.bub=st.bubS='자바칩 프라푸치노 만드는 중…'}
-       else{if(e.seat==null||e.seat<0)continue;st.to=e.seat;st.bub=(e.isMe?'주문하신 ':e.name+'님, ')+'자바칩 프라푸치노 나왔습니다~';st.bubS='배달 왔어요~'}
+       const making=now<ab[0],ad=byId(ab[2])?ab[2]:'jc',an=byId(ad).n,en=(typeof e.pr.nick==='string'&&e.pr.nick.trim()?e.pr.nick.trim().slice(0,12):'손님');const st={key:'staff:'+e.key,isStaff:true,peer:'staff',name:SALT,for:e,pr:{look:SALT_LOOK,st:'making',d:ad}};
+       if(making){const b=[0,1].find(i=>!used.has(i));if(b==null)continue;used.add(b);st.bar=b;st.bub=(e.isMe?'늘 드시던 ':en+'님 늘 먹던 ')+an+' 만드는 중…';st.bubS=an+' 만드는 중…'}
+       else{if(e.seat==null||e.seat<0)continue;st.to=e.seat;st.bub=(e.isMe?'주문하신 ':en+'님, ')+an+' 나왔습니다~';st.bubS='배달 왔어요~'}
        STAFF.push(st)}}
     for(const e of ppl){
       const pf=e.by?prof[e.by]:null;
@@ -2353,14 +2376,14 @@ async function renderFriends(){
       if(!e.isMe&&!e.isNpc)heardFrom(e);
     }
     PEOPLE=ppl;
-    const sig=JSON.stringify(STAFF.map(e=>[e.key,e.bar,e.to]))+JSON.stringify(ppl.map(e=>[e.key,e.seat,e.bar,e.isNpc||e.isMe?0:friendLv(e.peer).lv,e.rem!=null&&e.pr.st==='study',e.name,e.pr.look,e.bub,e.say,e.pr.d,e.pr.st,Math.round((leftOf(e)??0)*20)]))+selKey;
+    const sig=(typeof META!=='undefined'&&META?META.owner:'')+JSON.stringify(STAFF.map(e=>[e.key,e.bar,e.to]))+JSON.stringify(ppl.map(e=>[e.key,e.seat,e.bar,e.isNpc||e.isMe?0:friendLv(e.peer).lv,e.rem!=null&&e.pr.st==='study',e.name,e.pr.look,e.bub,e.say,e.pr.d,e.pr.st,Math.round((leftOf(e)??0)*20)]))+selKey;
     if(sig!==lastSig){lastSig=sig;drawFloor(taken)}
     tickTimes();
     const others=real-1,nN=ppl.length-real;
     $('fCount').textContent=real+'명'+(nN?` · 손님 ${nN}`:'');
     $('fEmpty').textContent=!ROOM||roomDead
       ?'동료 자리는 실시간 연결이 켜져야 열려요. README의 "친구랑 같이 쓰기"를 따라 설정해 주세요.'
-      :others?'':'오늘은 혼자 근무 중이에요. 이 페이지 주소를 친구에게 보내면 같은 매장에 출근해요.';
+      :others?'':(typeof IN_STORE!=='undefined'&&IN_STORE?'오늘은 혼자 근무 중이에요. 위쪽 "초대하기"로 링크를 보내면 친구가 알바생으로 출근해요.':'여기는 누구나 오는 공개 매장이에요. 위쪽 "우리 매장 열기"로 친구들만 오는 매장을 만들 수 있어요.');
     $('fEmpty').hidden=!$('fEmpty').textContent;
     if(selKey&&!ppl.some(e=>e.key===selKey)){selKey=null;$('fSel').hidden=true}
   }finally{rendering=false;if(again){again=false;renderFriends()}}
@@ -2476,7 +2499,7 @@ function hudPerson(e,x,headY,nameY,hit,side){
   const pop=lastBub[e.key]!==e.bub;lastBub[e.key]=e.bub;
   const kind=e.isNpc?' ai':e.isStaff?' staffb':e.say?' say':' st';
   return (e.bub?`<span class="bub hb ${side||'mid'}${kind}${pop?' pop':''}" style="${pct(x,headY)}"><span class="lg">${esc(e.bub)}</span><span class="sh">${esc(e.bubS)}</span></span>`:'')+
-    `<span class="hname${e.isMe?' me':''}${e.isStaff?' staff':e.isNpc?' npc':' human'}" style="${pct(Math.min(Math.max(x,VX+70),VX+VBW-70),nameY)};max-width:${((116*TS-10)/VBW*100).toFixed(2)}%"><span class="nl">${e.isStaff?'<i class="aib stf">직원</i>':e.isNpc?'<i class="aib">AI</i>':'<i class="dot"></i>'}<b class="nm">${esc(e.name)}</b>${!e.isNpc&&!e.isMe&&!e.isStaff?friendHearts(e.peer):''}</span>${e.isStaff?'':`<span class="ftime" data-k="${esc(e.key)}"></span>`}</span>`+(e.isStaff?'':
+    `<span class="hname${e.isMe?' me':''}${e.isStaff?' staff':e.isNpc?' npc':' human'}" style="${pct(Math.min(Math.max(x,VX+70),VX+VBW-70),nameY)};max-width:${((116*TS-10)/VBW*100).toFixed(2)}%"><span class="nl">${e.isStaff?'<i class="aib stf">직원</i>':e.isNpc?'<i class="aib">AI</i>':'<i class="dot"></i>'+(typeof isOwnerPeer==='function'&&isOwnerPeer(e.peer)?'<i class="aib own">점장</i>':'')}<b class="nm">${esc(e.name)}</b>${!e.isNpc&&!e.isMe&&!e.isStaff?friendHearts(e.peer):''}</span>${e.isStaff?'':`<span class="ftime" data-k="${esc(e.key)}"></span>`}</span>`+(e.isStaff?'':
     `<button class="hhit${selKey===e.key?' sel':''}" data-k="${esc(e.key)}" aria-label="${esc(e.name+': '+e.bub)}" style="${box(hit[0],hit[1],hit[2],hit[3])}"></button>`);
 }
 function drawFloor(taken){
@@ -2511,7 +2534,7 @@ function drawFloor(taken){
       // 테이블 앞(통로 쪽)에 서서 그 사람 쪽으로 건네줘요
       const side=st.to&1,face=side?-1:1,sx=cx-face*26,by=FY+40;
       fl+=mmPlace(st,sx,by,{apron:true,face:'happy'});
-      const jc=byId('jc'),ji=ideal(jc);fl+=cupSVG(ji.kind,ji.L,{straw:1}).replace('<svg viewBox="0 0 200 250"',`<svg x="${sx-face*16-9}" y="${by-62}" width="18" height="22" viewBox="0 0 200 250"`);
+      const jc=byId(st.pr.d)||byId('jc'),ji=ideal(jc);fl+=cupSVG(ji.kind,ji.L,{ice:ji.ice,straw:jc.ice}).replace('<svg viewBox="0 0 200 250"',`<svg x="${sx-face*16-9}" y="${by-62}" width="18" height="22" viewBox="0 0 200 250"`);
       const X=cx+(sx-cx)*TS;hud+=hudPerson(st,X,FY+(by-FY-108)*TS,FY+(by-FY+6)*TS,null,face>0?'r':'l');}
     fl+='</g>';
   });
@@ -2670,6 +2693,417 @@ addEventListener('resize',fitHall);fitHall();jdInit();
   renderChips();renderStudy();syncPresence();
   if(!S.done)toast(v.run?'하던 공부 이어서 진행 중이에요.':'멈춰둔 공부가 그대로 있어요.');
 }catch(e){}})();
+</script>
+
+<style>
+/* ===== 우리 매장(점장·알바생) · 근무표 · 출근 인증 카드 ===== */
+.sign-right{display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap;justify-content:flex-end}
+.signact{display:flex;gap:6px}
+.sbtn{border:1.5px solid rgba(255,240,214,.55);background:rgba(255,248,236,.12);color:var(--sign-ink,#FFF4E2);border-radius:99px;padding:4px 12px;font-family:var(--display);font-size:14px;line-height:1.3;white-space:nowrap}
+.sbtn:hover{background:rgba(255,248,236,.24)}
+.sbtn.gold{background:#F2C46B;border-color:#F2C46B;color:#4A2F14;box-shadow:0 2px 0 #B98A35}
+.sbtn.gold:hover{background:#F6D184}
+.sbtn.gold.glow{animation:glow 1.8s ease-in-out infinite}
+.sign h1[contenteditable="false"]{cursor:default}
+.sign h1[contenteditable="false"]:hover{border-bottom-color:transparent}
+.aib.own{background:#F2C46B;color:#5A3A1C}
+/* 매장 홀 이름표에서는 이름 폭을 안 뺏게 왼쪽 위 모서리에 걸쳐요(하트와 반대쪽) */
+.hname .aib.own{position:absolute;top:0;left:-3px;margin:0;transform:translateY(-68%) rotate(-7deg);font-size:.7em;padding:.05em .35em;box-shadow:0 1px 0 #B98A35;pointer-events:none}
+@media (max-width:760px){.sign-right{width:100%;justify-content:space-between}}
+
+dialog.sheet{border:none;padding:0;border-radius:20px;background:var(--surface);color:var(--ink);width:min(560px,calc(100vw - 24px));max-height:calc(100dvh - 32px);
+  box-shadow:0 24px 60px rgba(0,0,0,.28);overflow:hidden}
+dialog.sheet::backdrop{background:rgba(42,33,27,.45);backdrop-filter:blur(2px)}
+dialog.sheet[open]{display:flex;flex-direction:column;animation:sheetIn .22s ease-out}
+@keyframes sheetIn{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+.sh-head{position:relative;padding:18px 54px 14px 20px;background:linear-gradient(180deg,#8A5A36,#6E4528);color:#FFF4E2}
+.sh-head h2{margin:0;font-family:var(--display);font-weight:400;font-size:24px;line-height:1.25;word-break:keep-all}
+.sh-head p{margin:3px 0 0;font-size:13.5px;opacity:.85}
+.sh-x{position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:50%;border:1.5px solid rgba(255,240,214,.5);background:transparent;color:#FFF4E2;font-size:15px;line-height:1;display:grid;place-items:center}
+.sh-body{padding:16px 20px 20px;overflow:auto;display:flex;flex-direction:column;gap:16px}
+.sh-sec h3{margin:0 0 8px;font-family:var(--display);font-weight:400;font-size:16.5px}
+.sh-body .hint{margin:6px 0 0;font-size:12.5px;line-height:1.5;color:var(--muted)}
+.sh-field{display:flex;flex-direction:column;gap:6px;font-size:13.5px;color:var(--muted)}
+.sh-field input{font:inherit;font-size:16px;color:var(--ink);background:var(--surface-2);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px}
+.sh-field input:focus{outline:none;border-color:var(--accent)}
+.goalchips{display:flex;flex-wrap:wrap;gap:6px}
+.goalchips button{border:1.5px solid var(--line);background:var(--surface);border-radius:99px;padding:5px 12px;font-size:13.5px}
+.goalchips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.invite{display:flex;flex-direction:column;gap:8px;background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:12px}
+.invite .msg{font-size:14px;line-height:1.5;white-space:pre-line}
+.invite .url{font-family:var(--mono);font-size:12px;color:var(--muted);word-break:break-all}
+.sh-row{display:flex;gap:8px;flex-wrap:wrap}
+.sh-row .btn{flex:1 1 auto;font-size:16px;padding:10px 14px}
+.storelist{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.storelist a{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 12px;border:1px solid var(--line);border-radius:12px;color:var(--ink);text-decoration:none;background:var(--surface)}
+.storelist a:hover{border-color:var(--accent)}
+.storelist a[aria-current="page"]{background:var(--accent-soft);border-color:var(--accent)}
+.storelist small{color:var(--muted);font-size:12px;white-space:nowrap}
+.perks{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:13.5px}
+.perks li{display:flex;gap:8px;align-items:flex-start}
+.perks li i{font-style:normal;flex:none;width:22px;height:22px;border-radius:50%;background:#FFF3DF;color:#8A5A36;display:grid;place-items:center;font-size:12px}
+
+/* 근무표 */
+.wk-goal{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--muted)}
+.wk-tbl{display:flex;flex-direction:column;gap:6px}
+.wk-row{display:grid;grid-template-columns:32px minmax(0,1fr) auto;grid-template-areas:"av nm tot" "av days days" "av bar bar";column-gap:10px;row-gap:5px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.wk-row.me{border-color:#C2577A;box-shadow:inset 3px 0 0 #C2577A}
+.wk-row .av{grid-area:av;width:32px;align-self:start}
+.wk-row .av svg{width:32px;height:auto;display:block}
+.wk-row .nm{grid-area:nm;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wk-row .nm .aib{vertical-align:.1em}
+.wk-row .tot{grid-area:tot;font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.wk-row .tot b{font-size:15px}
+.wk-days{grid-area:days;display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.wk-d{display:flex;flex-direction:column;align-items:center;gap:1px;font-size:10.5px;color:var(--muted)}
+.wk-d .st{width:26px;height:26px;border-radius:50%;border:1.5px dashed var(--line);display:grid;place-items:center;font-size:12px;color:transparent}
+.wk-d.on .st{border:none;background:#2F7A5A;color:#fff;transform:rotate(-8deg);box-shadow:0 0 0 2px #fff inset,0 0 0 1px #2F7A5A}
+.wk-d.today .st{outline:2px solid #F2C46B;outline-offset:1px}
+.wk-d.future .st{opacity:.45}
+.wk-bar{grid-area:bar;height:6px;border-radius:9px;background:var(--surface-2);overflow:hidden}
+.wk-bar i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,#2F7A5A,#7BC6A0)}
+.wk-bar.full i{background:linear-gradient(90deg,#E0A93B,#F2C46B)}
+.wk-empty{font-size:13.5px;color:var(--muted);background:var(--surface-2);border-radius:12px;padding:12px}
+
+/* 점장 멤버십 */
+.member{position:relative;background:linear-gradient(180deg,#FFF6E3,#FFF0D2);border:1.5px solid #F2C46B;border-radius:16px;padding:14px 14px 14px}
+.member .mb-tag{position:absolute;top:12px;right:12px;font-size:11.5px;background:#2F5D4C;color:#FFF8EC;border-radius:99px;padding:2px 9px}
+.member .perks li i{background:#FFFFFF}
+.member .sh-row{margin-top:12px}
+.btn.gold{background:#F2C46B;color:#4A2F14;box-shadow:0 2px 0 #B98A35}
+.btn.gold:hover{background:#F6D184}
+.mb-q{margin:12px 0 8px;font-size:14px;font-weight:700}
+.mb-done{margin:12px 0 0;font-size:14px;line-height:1.5;color:#2F5D4C}
+/* 인증 카드 미리보기 */
+.cardprev{display:block;width:100%;max-width:340px;margin:0 auto;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.cardwait{display:grid;place-items:center;height:200px;color:var(--muted)}
+</style>
+
+<dialog class="sheet" id="sheet" aria-labelledby="shTitle"></dialog>
+
+<script>
+/* ===== 우리 매장(점장·알바생) · 이번 주 근무표 · 출근 인증 카드 =====
+   매장 = room. 주소의 ?room= 이 없으면 누구나 오는 공개 매장(main)이에요.
+   매장 정보(이름·점장·주간 목표)와 명부는 서버가 갖고, 각자 브라우저도 사본을 들고 있다가 서버가 잠에서 깨면 돌려줘요. */
+const RM=window.CAFE_ROOM||'main',IN_STORE=RM!=='main';
+const DEV_ID=(()=>{try{return localStorage.getItem('barista.device')||''}catch(e){return''}})();
+const STORES_KEY='barista.stores',ROSTER_KEY='barista.roster.'+RM,PENDING_KEY='barista.pendingStore';
+let STORES={};try{STORES=JSON.parse(localStorage.getItem(STORES_KEY)||'{}')||{}}catch(e){}
+const saveStores=()=>{try{localStorage.setItem(STORES_KEY,JSON.stringify(STORES))}catch(e){}};
+let META=IN_STORE&&STORES[RM]&&STORES[RM].meta||null;
+let ROSTER={};try{const v=JSON.parse(localStorage.getItem(ROSTER_KEY)||'[]');if(Array.isArray(v))for(const e of v)if(e&&e.id)ROSTER[e.id]=e}catch(e){}
+let SERVER_STORE=false,rosterSeeded=false;
+if(IN_STORE){STORES[RM]=Object.assign(STORES[RM]||{},{last:Date.now()});saveStores()}
+
+/* 이용 지표: 숫자만 서버에 세요(이름·내용은 안 보내요) */
+const ev=e=>{try{if(ROOM&&ROOM.act)ROOM.act({a:'ev',e})}catch(_){}};
+const myPid=()=>{try{return myPeerId()||DEV_ID}catch(e){return DEV_ID}};
+const amOwner=()=>!!(META&&META.owner&&(META.owner===myPid()||META.owner===DEV_ID));
+function isOwnerPeer(id){return !!(IN_STORE&&META&&META.owner&&id===META.owner)}
+const inviteURL=()=>location.origin+location.pathname+'?room='+encodeURIComponent(RM);
+
+/* ---------- 이번 주(월~일) 내 근무 기록 ---------- */
+const dkey=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+function weekStart(){const x=new Date();x.setHours(0,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
+function weekDates(){const s=weekStart();return[...Array(7)].map((_,i)=>{const d=new Date(s);d.setDate(s.getDate()+i);return d})}
+function myWeek(){const ds=weekDates(),m=[],s=[];
+  for(const d of ds){const v=DB.days[dkey(d)];m.push(v?v.focus||0:0);s.push(v&&((v.focus||0)>0||v.in)?1:0)}
+  return{k:dkey(ds[0]),m,s}}
+const todayIdx=()=>(new Date().getDay()+6)%7;
+const hm=min=>{min=Math.round(min||0);const h=Math.floor(min/60),m=min%60;return h?(m?`${h}시간 ${m}분`:`${h}시간`):`${m}분`};
+const hmShort=min=>{min=Math.round(min||0);const h=Math.floor(min/60),m=min%60;return h?`${h}h ${String(m).padStart(2,'0')}m`:`${m}m`};
+
+/* 공부를 처음 시작하는 순간 = 출근 도장 */
+function clockIn(){
+  const d=day();if(d.in)return;d.in=hhmm();save();
+  const n=myWeek().s.reduce((a,b)=>a+b,0);
+  toast(`출근 도장 쾅! ${d.in} 출근 · 이번 주 ${n}일째 출근이에요`);syncPresence();
+}
+
+/* ---------- 간판: 매장 이름, 버튼 ---------- */
+function paintSign(){
+  const h=$('cafeName'),sb=$('storeBtn');if(!h||!sb)return;
+  if(IN_STORE){
+    const t=(META&&META.title)||(STORES[RM]&&STORES[RM].title)||RM.replace(/-[a-z0-9]{4}$/,'');
+    if(document.activeElement!==h)h.textContent=t;
+    h.setAttribute('contenteditable',amOwner()?'true':'false');
+    h.title=amOwner()?'점장만 매장 이름을 바꿀 수 있어요. 눌러서 바꾸기':(META&&META.ownerName?`점장 ${META.ownerName}님의 매장`:'우리 매장');
+    sb.textContent='초대하기';sb.classList.remove('glow');
+    document.title=t+' · 오늘의 바리스타';
+  }else{
+    sb.textContent='우리 매장 열기';
+    let seen=false;try{seen=localStorage.getItem('barista.storeSeen')==='1'}catch(e){}
+    sb.classList.toggle('glow',!seen&&!Object.keys(STORES).length);
+  }
+}
+/* 간판 이름을 눌러서 바꿨을 때: 매장 안에서는 점장만 매장 이름을 바꿔요(true를 돌려주면 원래 처리는 건너뜀) */
+function storeRename(el){
+  if(!IN_STORE)return false;
+  const t=el.textContent.replace(/\s+/g,' ').trim().slice(0,20);
+  if(amOwner()&&t&&(!META||t!==META.title))setMeta({title:t});
+  paintSign();return true;
+}
+function setMeta(patch){
+  if(!IN_STORE)return;
+  if(META&&amOwner()){Object.assign(META,patch);cacheMeta()}
+  if(SERVER_STORE&&ROOM&&ROOM.act)ROOM.act(Object.assign({a:'meta'},patch));
+  paintSign();
+}
+function cacheMeta(){if(!IN_STORE||!META)return;STORES[RM]=Object.assign(STORES[RM]||{},{title:META.title,meta:META,last:Date.now()});saveStores()}
+
+/* ---------- 시트(팝업) ---------- */
+const sheet=$('sheet');
+function openSheet(title,sub,body){
+  sheet.innerHTML=`<div class="sh-head"><h2 id="shTitle">${esc(title)}</h2>${sub?`<p>${esc(sub)}</p>`:''}<button class="sh-x" aria-label="닫기">✕</button></div><div class="sh-body">${body}</div>`;
+  sheet.querySelector('.sh-x').onclick=closeSheet;
+  if(!sheet.open){try{sheet.showModal()}catch(e){sheet.setAttribute('open','')}}
+  sheet.querySelector('.sh-body').scrollTop=0;
+}
+function closeSheet(){try{sheet.close()}catch(e){sheet.removeAttribute('open')}}
+sheet.addEventListener('click',e=>{if(e.target===sheet)closeSheet()});
+
+const GOAL_OPTS=[5,10,15,20,30,0];
+const goalChips=(cur)=>`<div class="goalchips" role="group" aria-label="이번 주 목표">${GOAL_OPTS.map(g=>`<button type="button" data-g="${g}" aria-pressed="${g===cur}">${g?g+'시간':'목표 없음'}</button>`).join('')}</div>`;
+function bindGoalChips(root,onPick){root.querySelectorAll('.goalchips button').forEach(b=>b.onclick=()=>{root.querySelectorAll('.goalchips button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));onPick(+b.dataset.g)})}
+
+function storeListHTML(){
+  const list=Object.entries(STORES).filter(([k])=>k!=='main').sort((a,b)=>(b[1].last||0)-(a[1].last||0));
+  if(!list.length)return'';
+  return `<section class="sh-sec"><h3>내 매장</h3><ul class="storelist">${list.map(([k,v])=>`<li><a href="?room=${encodeURIComponent(k)}"${k===RM?' aria-current="page"':''}><span>${esc(v.title||k)}${v.meta&&(v.meta.owner===DEV_ID)?' <i class="aib own">점장</i>':''}</span><small>${k===RM?'지금 여기':'출근하기 →'}</small></a></li>`).join('')}${IN_STORE?`<li><a href="./"><span>공개 매장</span><small>누구나 오는 곳 →</small></a></li>`:''}</ul></section>`;
+}
+
+/* 우리 매장 열기 */
+function openCreate(){
+  try{localStorage.setItem('barista.storeSeen','1')}catch(e){}
+  paintSign();
+  let goal=10;
+  openSheet('우리 매장 열기','친구들만 들어오는 우리 카페를 차려요',`
+    <section class="sh-sec">
+      <ul class="perks">
+        <li><i>👑</i><span>내가 <b>점장</b>, 초대 링크로 들어온 친구는 <b>알바생</b>이에요</span></li>
+        <li><i>☕</i><span>공부를 시작하면 <b>출근 도장</b>이 찍히고, 매장 <b>근무표</b>로 서로 이번 주 출근과 공부 시간을 봐요</span></li>
+        <li><i>📸</i><span>공부 끝나면 <b>출근 인증 카드</b>를 단톡방에 바로 올릴 수 있어요. 인증샷 찍을 필요 없어요</span></li>
+      </ul>
+    </section>
+    <section class="sh-sec">
+      <label class="sh-field">매장 이름<input id="newName" maxlength="20" placeholder="예: 토익 900 스터디, 공채 준비반"></label>
+    </section>
+    <section class="sh-sec"><h3>이번 주 목표 (한 사람당)</h3>${goalChips(goal)}<p class="hint">점장이 나중에 언제든 바꿀 수 있어요.</p></section>
+    <div class="sh-row"><button class="btn" id="newGo">매장 열기</button></div>
+    ${storeListHTML()}`);
+  bindGoalChips(sheet,g=>goal=g);
+  const inp=$('newName');setTimeout(()=>inp.focus(),60);
+  const go=()=>{
+    const title=inp.value.replace(/\s+/g,' ').trim().slice(0,20);
+    if(!title){inp.focus();toast('매장 이름을 먼저 정해요');return}
+    const slug=title.replace(/[^\w가-힣]/g,'').slice(0,14)||'cafe';
+    const room=slug+'-'+Math.random().toString(36).slice(2,6);
+    try{localStorage.setItem(PENDING_KEY,JSON.stringify({room,title,goal,at:Date.now()}))}catch(e){}
+    STORES[room]={title,last:Date.now(),meta:{title,owner:DEV_ID,ownerName:nick,goal,at:Date.now()}};saveStores();
+    try{saveStudy()}catch(e){}
+    ev('create');setTimeout(()=>{location.href='?room='+encodeURIComponent(room)},120);
+  };
+  $('newGo').onclick=go;inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();go()}});
+}
+
+/* 초대하기 (매장 안) */
+function inviteText(){const t=(META&&META.title)||'우리 매장';return `☕ [오늘의 바리스타] ${t}에 알바생으로 와 줘!\n커피 한 잔 직접 만들어 들고 같이 출근해서 공부하자.`}
+function openInvite(){
+  const own=amOwner(),n=Object.keys(rosterEntries()).length;
+  const sub=META?(META.ownerName?`점장 ${META.ownerName}`:'우리 매장')+` · 알바생 ${n}명`+(META.goal?` · 주 ${META.goal}시간 목표`:''):'매장 정보를 불러오는 중…';
+  openSheet((META&&META.title)||'우리 매장',sub,`
+    <section class="sh-sec"><h3>알바생 초대하기</h3>
+      <div class="invite"><div class="msg">${esc(inviteText())}</div><div class="url">${esc((()=>{try{return decodeURI(inviteURL())}catch(e){return inviteURL()}})())}</div></div>
+      <div class="sh-row" style="margin-top:10px"><button class="btn" id="invShare">초대 링크 보내기</button><button class="btn ghost" id="invCopy">링크 복사</button></div>
+      <p class="hint">단톡방에 붙이면 "○○에 알바생으로 초대됐어요" 미리보기가 떠요. 링크를 아는 사람만 들어올 수 있어요.</p>
+    </section>
+    ${own?`<section class="sh-sec"><h3>점장 설정</h3>
+      <label class="sh-field">매장 이름<input id="metaName" maxlength="20" value="${esc((META&&META.title)||'')}"></label>
+      <div style="margin-top:12px"><div class="sh-field" style="margin-bottom:6px">이번 주 목표 (한 사람당)</div>${goalChips(META?META.goal:10)}</div>
+    </section>`:''}
+    ${own?memberHTML():''}
+    ${storeListHTML()}
+    <div class="sh-row"><button class="btn ghost" id="invNew">＋ 새 매장 열기</button></div>`);
+  if(own)bindMember();
+  const copy=async()=>{ev('invite');const txt=inviteText()+'\n'+inviteURL();
+    try{await navigator.clipboard.writeText(txt);toast('초대 메시지를 복사했어요. 단톡방에 붙여 넣어요!')}
+    catch(e){const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('초대 메시지를 복사했어요')}catch(_){toast('복사가 막혀 있어요. 주소창 링크를 직접 보내 주세요')}ta.remove()}};
+  $('invCopy').onclick=copy;
+  $('invShare').onclick=async()=>{
+    if(navigator.share){try{await navigator.share({title:(META&&META.title)||'오늘의 바리스타',text:inviteText(),url:inviteURL()});ev('invite');return}catch(e){if(e&&e.name==='AbortError')return}}
+    copy();
+  };
+  $('invNew').onclick=openCreate;
+  if(own){
+    const mn=$('metaName');
+    mn.addEventListener('change',()=>{const t=mn.value.replace(/\s+/g,' ').trim().slice(0,20);if(t)setMeta({title:t})});
+    bindGoalChips(sheet,g=>{setMeta({goal:g});toast(g?`이번 주 목표를 ${g}시간으로 정했어요`:'주간 목표를 없앴어요')});
+  }
+}
+/* ---------- 점장 멤버십 (준비 중): 진짜로 돈 낼 사람이 있는지 먼저 물어봐요 ---------- */
+const MEMBER_KEY='barista.member';
+let MEMBER={};try{MEMBER=JSON.parse(localStorage.getItem(MEMBER_KEY)||'{}')||{}}catch(e){}
+const saveMember=()=>{try{localStorage.setItem(MEMBER_KEY,JSON.stringify(MEMBER))}catch(e){}};
+const PRICES=[[1900,'월 1,900원'],[2900,'월 2,900원'],[4900,'월 4,900원'],[0,'무료면 쓸래요']];
+function memberHTML(){
+  return `<section class="sh-sec member"><div class="mb-tag">준비 중</div><h3>점장 멤버십</h3>
+    <ul class="perks">
+      <li><i>📅</i><span><b>지난 근무표 보관</b> · 지금은 이번 주만 보여요. 월간 출석률과 누적 시간까지</span></li>
+      <li><i>🎨</i><span><b>매장 꾸미기</b> · 인테리어 테마, 간판 색, 칠판 메뉴를 우리 매장답게</span></li>
+      <li><i>👥</i><span><b>알바생 정원 늘리기</b> · 지금 12석에서 24석으로</span></li>
+      <li><i>💸</i><span><b>목표 미달 표시</b> · 주간 목표 못 채운 사람 자동 정리 (벌금 계산은 점장님 몫)</span></li>
+    </ul>
+    <div id="mbBox">${memberBox()}</div></section>`;
+}
+function memberBox(){
+  if(MEMBER.price!=null)return `<p class="mb-done">고마워요! "${PRICES.find(p=>p[0]===MEMBER.price)[1]}"로 기록했어요. 생기면 이 매장 간판에서 제일 먼저 알려 드릴게요.</p>`;
+  if(MEMBER.want)return `<p class="mb-q">얼마면 쓸 것 같아요? (매장 하나, 점장 1명만 내요)</p><div class="goalchips mb-price">${PRICES.map(p=>`<button type="button" data-p="${p[0]}">${p[1]}</button>`).join('')}</div>`;
+  return `<div class="sh-row"><button class="btn gold" id="mbWant">이거 생기면 쓸래요</button></div><p class="hint" style="margin:0">아직 결제는 없어요. 눌러 주면 만들지 말지 정하는 데 써요.</p>`;
+}
+function bindMember(){
+  if(!MEMBER.viewed){MEMBER.viewed=1;saveMember();ev('member_view')}
+  const box=$('mbBox');if(!box)return;
+  const w=$('mbWant');if(w)w.onclick=()=>{MEMBER.want=1;saveMember();ev('member_want');box.innerHTML=memberBox();bindMember()};
+  box.querySelectorAll('.mb-price button').forEach(b=>b.onclick=()=>{MEMBER.price=+b.dataset.p;saveMember();ev('price_'+b.dataset.p);box.innerHTML=memberBox()});
+}
+$('storeBtn').onclick=()=>IN_STORE?openInvite():openCreate();
+
+/* ---------- 이번 주 근무표 ---------- */
+function rosterEntries(){
+  const out={},wkKey=dkey(weekStart());
+  for(const e of Object.values(ROSTER))out[e.id]=Object.assign({},e);
+  try{for(const p of (typeof PEOPLE!=='undefined'?PEOPLE:[])){if(p.isNpc||p.isStaff||!p.peer)continue;
+    const o=out[p.peer]||{id:p.peer};o.name=p.name;if(p.pr&&p.pr.look)o.look=p.pr.look;if(p.pr&&p.pr.wk)o.wk=p.pr.wk;o.live=true;out[p.peer]=o}}catch(e){}
+  const me=myPid();if(me){const o=out[me]||{id:me};o.name=nick||'나';o.look=lookOut();o.wk=myWeek();o.me=true;out[me]=o}
+  for(const o of Object.values(out)){if(!o.wk||o.wk.k!==wkKey)o.wk={k:wkKey,m:[0,0,0,0,0,0,0],s:[0,0,0,0,0,0,0]}}
+  if(!IN_STORE)for(const k in out)if(!out[k].me)delete out[k];
+  return out;
+}
+const DAYN=['월','화','수','목','금','토','일'];
+function openRoster(){
+  ev('roster');
+  const ds=weekDates(),ti=todayIdx(),goal=IN_STORE&&META?META.goal||0:0;
+  const list=Object.values(rosterEntries()).map(e=>Object.assign(e,{tot:e.wk.m.reduce((a,b)=>a+b,0),days:e.wk.s.reduce((a,b)=>a+b,0)}))
+    .sort((a,b)=>(b.tot-a.tot)||(b.days-a.days)||((a.name||'')<(b.name||'')?-1:1));
+  const range=`${ds[0].getMonth()+1}.${ds[0].getDate()}(월) – ${ds[6].getMonth()+1}.${ds[6].getDate()}(일)`;
+  const rows=list.map(e=>{
+    const pct=goal?Math.min(100,e.tot/(goal*60)*100):Math.min(100,e.tot/(20*60)*100);
+    return `<div class="wk-row${e.me?' me':''}"><div class="av">${e.look?personSVG(e.look,{face:'smile'}):''}</div>
+      <div class="nm">${esc(e.name||'알바생')}${isOwnerPeer(e.id)?' <i class="aib own">점장</i>':''}</div>
+      <div class="tot"><b>${hmShort(e.tot)}</b>${goal?` / ${goal}h`:''}</div>
+      <div class="wk-days">${DAYN.map((n,i)=>`<div class="wk-d${e.wk.s[i]?' on':''}${i===ti?' today':''}${i>ti?' future':''}" title="${n}요일 ${e.wk.s[i]?hm(e.wk.m[i])+' 근무':'출근 기록 없음'}"><span class="st">☕</span>${n}</div>`).join('')}</div>
+      <div class="wk-bar${goal&&e.tot>=goal*60?' full':''}"><i style="width:${pct.toFixed(1)}%"></i></div></div>`}).join('');
+  const sub=IN_STORE?`${range} · ${goal?`목표 한 사람당 ${goal}시간`:'주간 목표 없음'}`:`${range} · 내 기록`;
+  openSheet(IN_STORE?'이번 주 근무표':'내 근무표',sub,`
+    <div class="wk-tbl">${rows}</div>
+    ${IN_STORE?(list.length<2?'<p class="wk-empty">아직 알바생이 나뿐이에요. "초대하기"로 친구를 부르면 여기서 서로의 출근 도장을 볼 수 있어요.</p>':''):'<p class="wk-empty">공개 매장에서는 내 기록만 보여요. "우리 매장 열기"로 친구들만 오는 매장을 만들면 서로의 근무표를 같이 봐요.</p>'}
+    <p class="hint" style="margin:0">공부를 시작한 날엔 ☕ 출근 도장이 찍혀요. 시간은 다 마신 잔과 멈춘 시점까지 센 공부 시간이에요.</p>
+    <div class="sh-row"><button class="btn" id="wkCard">내 출근 인증 카드 만들기</button>${IN_STORE?'<button class="btn ghost" id="wkInv">알바생 초대하기</button>':'<button class="btn ghost" id="wkNew">우리 매장 열기</button>'}</div>`);
+  $('wkCard').onclick=openCard;
+  if($('wkInv'))$('wkInv').onclick=openInvite;
+  if($('wkNew'))$('wkNew').onclick=openCreate;
+}
+$('rosterBtn').onclick=openRoster;
+document.addEventListener('click',e=>{if(e.target&&e.target.id==='fCard')openCard()});
+
+/* ---------- 출근 인증 카드 (단톡방 인증용 이미지) ---------- */
+const CSSV={'--cupline':'#56675E','--glass':'rgba(255,255,255,.6)','--accent':'#2C6A57','--line':'#C9D5CB','--muted':'#5F6B62','--body':'sans-serif','--ink':'#25201C'};
+const svgImg=(svg,w,h)=>new Promise((ok,no)=>{
+  svg=svg.replace(/var\((--[\w-]+)\)/g,(m,k)=>CSSV[k]||'#56675E').replace(/^<svg/,`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"`);
+  const im=new Image();im.onload=()=>ok(im);im.onerror=no;im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg)});
+function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
+async function makeCard(){
+  try{await Promise.all([document.fonts.load('60px Jua'),document.fonts.load('30px "Gowun Dodum"'),document.fonts.load('600 26px "IBM Plex Mono"')])}catch(e){}
+  const W=1080,H=1350,cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');
+  const F=(px,f)=>`${px}px ${f==='m'?'"IBM Plex Mono",monospace':f==='b'?'"Gowun Dodum",sans-serif':'Jua,"Gowun Dodum",sans-serif'}`;
+  const d=day(),wk=myWeek(),ti=todayIdx(),now=new Date();
+  const store=IN_STORE?((META&&META.title)||'우리 매장'):(DB.name||'나의 작은 카페');
+  const goal=IN_STORE&&META?META.goal||0:0,wtot=wk.m.reduce((a,b)=>a+b,0),wdays=wk.s.reduce((a,b)=>a+b,0);
+  // 바닥: 크림 + 타일 무늬
+  c.fillStyle='#FFF8EC';c.fillRect(0,0,W,H);
+  c.strokeStyle='rgba(47,93,76,.06)';c.lineWidth=3;for(let y=300;y<H;y+=44){c.beginPath();c.moveTo(0,y);c.lineTo(W,y);c.stroke()}
+  // 차양
+  for(let i=0;i<12;i++){c.fillStyle=i%2?'#FFF8EC':'#2F5D4C';c.fillRect(i*90,0,90,70);c.beginPath();c.arc(i*90+45,70,45,0,Math.PI);c.fill()}
+  // 나무 간판
+  const g=c.createLinearGradient(0,130,0,290);g.addColorStop(0,'#9A6740');g.addColorStop(1,'#6E4528');
+  c.fillStyle=g;rr(c,50,140,W-100,150,26);c.fill();
+  c.strokeStyle='#FFE7A8';c.lineWidth=3;rr(c,90,186,124,52,26);c.stroke();
+  c.fillStyle='#FFE7A8';c.font=F(26,'m');c.textAlign='center';c.textBaseline='middle';c.fillText('OPEN',152,213);
+  c.fillStyle='#FFF4E2';c.textAlign='left';let fs=62;c.font=F(fs);while(c.measureText(store).width>W-340&&fs>34){fs-=2;c.font=F(fs)}c.fillText(store,240,216);
+  // 출근 도장
+  c.save();c.translate(W-190,420);c.rotate(-.2);c.strokeStyle='#C2577A';c.fillStyle='#C2577A';
+  c.lineWidth=7;c.beginPath();c.arc(0,0,112,0,Math.PI*2);c.stroke();c.lineWidth=3;c.beginPath();c.arc(0,0,96,0,Math.PI*2);c.stroke();
+  c.textAlign='center';c.font=F(58);c.fillText(d.in||d.focus?'출근':'휴무',0,-6);c.font=F(30,'m');c.fillText(`${now.getMonth()+1}.${String(now.getDate()).padStart(2,'0')}`,0,48);
+  c.font=F(22,'b');c.fillText(d.in?d.in+' 출근':'',0,-62);c.restore();
+  // 캐릭터와 오늘의 잔
+  try{const me=await svgImg(personSVG(lookOut(),{face:'happy'}),26*15,37*15);c.imageSmoothingEnabled=false;c.drawImage(me,90,330,26*15,37*15)}catch(e){}
+  const last=[...d.cups].reverse().find(x=>!x.guest),lr=last&&R.find(r=>r.n===last.n);
+  if(lr){try{const i=ideal(lr),cu=await svgImg(cupSVG(i.kind,i.L,{ice:i.ice,straw:lr.ice,steam:i.kind==='mug'}),200,250);c.imageSmoothingEnabled=true;c.drawImage(cu,440,640,200,250)}catch(e){}}
+  // 이름과 오늘 기록
+  c.textAlign='left';c.fillStyle='#2F5D4C';c.font=F(30,'b');c.fillText(IN_STORE?(amOwner()?'점장':'알바생'):'바리스타',680,640);
+  c.fillStyle='#25201C';fs=64;c.font=F(fs);const nm=nick||'나';while(c.measureText(nm).width>W-740&&fs>36){fs-=2;c.font=F(fs)}c.fillText(nm,680,700);
+  c.fillStyle='#5F6B62';c.font=F(30,'b');c.fillText('오늘 근무',680,790);
+  c.fillStyle='#2F7A5A';fs=76;c.font=F(fs);const tt=hm(d.focus);while(c.measureText(tt).width>W-740&&fs>44){fs-=2;c.font=F(fs)}c.fillText(tt,680,860);
+  const mine=d.cups.filter(x=>!x.guest),line=mine.length?`${mine[mine.length-1].n}${mine.length>1?` 외 ${mine.length-1}잔`:''}`:'아직 첫 잔 전';
+  c.fillStyle='#5F6B62';c.font=F(28,'b');c.fillText(line,680,912);
+  // 이번 주 출근 도장
+  c.fillStyle='#FFFFFF';rr(c,60,960,W-120,300,28);c.fill();c.strokeStyle='#E8DCC6';c.lineWidth=3;c.stroke();
+  c.fillStyle='#25201C';c.font=F(36);c.textAlign='left';c.fillText('이번 주 출근 도장',100,1015);
+  c.textAlign='right';c.fillStyle='#2F5D4C';c.font=F(30,'m');c.fillText(`${wdays}/7일 · ${hmShort(wtot)}${goal?` / ${goal}h`:''}`,W-100,1015);
+  for(let i=0;i<7;i++){const cx=130+i*137,cy=1105,on=wk.s[i];
+    c.lineWidth=4;c.setLineDash(on?[]:[10,8]);c.strokeStyle=on?'#2F7A5A':'#CFC3AE';c.fillStyle='#2F7A5A';
+    c.beginPath();c.arc(cx,cy,46,0,Math.PI*2);if(on)c.fill();c.stroke();c.setLineDash([]);
+    if(i===ti){c.strokeStyle='#F2C46B';c.lineWidth=5;c.beginPath();c.arc(cx,cy,56,0,Math.PI*2);c.stroke()}
+    c.textAlign='center';if(on){c.fillStyle='#FFFFFF';c.font=F(38);c.fillText('☕',cx,cy+2)}
+    c.fillStyle=i>ti?'#B9AE9C':'#5F6B62';c.font=F(26,'b');c.fillText(DAYN[i],cx,cy+80)}
+  if(goal){const p=Math.min(1,wtot/(goal*60));c.fillStyle='#F0E8DA';rr(c,100,1222,W-200,14,7);c.fill();if(p>0){c.fillStyle=p>=1?'#E0A93B':'#2F7A5A';rr(c,100,1222,Math.max(14,(W-200)*p),14,7);c.fill()}}
+  // 바닥글
+  c.textAlign='center';c.fillStyle='#8A7A66';c.font=F(26,'b');c.fillText('오늘의 바리스타 · 내가 만든 커피 한 잔 들고 같이 공부해요',W/2,1300);
+  return cv;
+}
+async function openCard(){
+  ev('card');
+  openSheet('출근 인증 카드','단톡방에 올리면 인증 끝! 사진 찍을 필요 없어요','<div class="cardwait">카드 굽는 중…</div>');
+  let cv;try{cv=await makeCard()}catch(e){console.error(e);sheet.querySelector('.sh-body').innerHTML='<p class="wk-empty">카드를 만들지 못했어요. 잠시 뒤에 다시 해 볼까요?</p>';return}
+  const blob=await new Promise(ok=>cv.toBlob(ok,'image/png')),url=URL.createObjectURL(blob);
+  const n=new Date(),fname=`출근인증-${n.getMonth()+1}${String(n.getDate()).padStart(2,'0')}.png`,file=new File([blob],fname,{type:'image/png'});
+  const canShare=!!(navigator.canShare&&navigator.canShare({files:[file]}));
+  sheet.querySelector('.sh-body').innerHTML=`<img class="cardprev" src="${url}" alt="오늘 출근 인증 카드">
+    <div class="sh-row">${canShare?'<button class="btn" id="cdShare">카드 보내기</button>':''}<a class="btn${canShare?' ghost':''}" id="cdSave" href="${url}" download="${fname}" style="text-align:center;text-decoration:none">이미지 저장</a></div>
+    ${canShare?'':'<p class="hint" style="margin:0">저장한 이미지를 단톡방에 올리면 돼요.</p>'}`;
+  if(canShare)$('cdShare').onclick=async()=>{try{await navigator.share({files:[file],title:'출근 인증',text:IN_STORE?inviteText()+'\n'+inviteURL():'오늘의 바리스타 출근 인증 ☕'})}catch(e){}};
+}
+
+/* ---------- 서버와 맞추기 ---------- */
+function applyStore(m){
+  if(!IN_STORE)return;
+  SERVER_STORE=true;
+  if(m.t==='meta'){
+    if(m.meta){
+      const mine=STORES[RM]&&STORES[RM].meta;
+      if(m.meta.guess&&mine&&!mine.guess&&mine.owner!==m.meta.owner){ROOM.act({a:'metaseed',meta:mine});return}
+      META=m.meta;cacheMeta();try{localStorage.removeItem(PENDING_KEY)}catch(e){}}
+    else{
+      // 서버가 이 매장을 모르면: 방금 연 매장이면 만들고, 아니면 내가 기억하는 매장 정보를 돌려줘요
+      let pend=null;try{pend=JSON.parse(localStorage.getItem(PENDING_KEY)||'null')}catch(e){}
+      if(pend&&pend.room===RM)ROOM.act({a:'meta',title:pend.title,goal:pend.goal});
+      else if(STORES[RM]&&STORES[RM].meta)ROOM.act({a:'metaseed',meta:STORES[RM].meta});
+      else ROOM.act({a:'meta',guess:1,title:RM.replace(/-[a-z0-9]{4}$/,'').slice(0,20)||'우리 매장',goal:10}); // 주소만 아는 매장: 처음 온 사람이 (임시) 점장
+    }
+    paintSign();lastSig='';renderFriends();
+  }else if(m.t==='roster'){
+    const srv={};for(const e of m.list||[])if(e&&e.id)srv[e.id]=e;
+    if(!rosterSeeded){rosterSeeded=true;
+      const missing=Object.values(ROSTER).filter(e=>e.seen&&(!srv[e.id]||srv[e.id].seen<e.seen));
+      if(missing.length)ROOM.act({a:'rosterseed',list:missing.slice(0,60)})}
+    for(const id in srv)if(!ROSTER[id]||(ROSTER[id].seen||0)<=srv[id].seen)ROSTER[id]=srv[id];
+    try{localStorage.setItem(ROSTER_KEY,JSON.stringify(Object.values(ROSTER).slice(-60)))}catch(e){}
+  }
+}
+(async()=>{try{const r=await window.claude.use('room');if(r&&r.onStore)r.onStore(applyStore)}catch(e){}})();
+paintSign();
+// 이름을 바꾸면 점장 이름도 같이 맞춰요
+$('nick').addEventListener('change',()=>{setTimeout(()=>{if(IN_STORE&&amOwner()&&META&&META.ownerName!==nick)setMeta({})},300)});
 </script>
 
 <script>
