@@ -938,6 +938,10 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
 .fsel .fx{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:13px;line-height:1;display:grid;place-items:center;cursor:pointer;padding:0}
 .fsel .fx:hover{color:var(--ink);background:var(--surface-2)}
 @media (min-width:820px){.friends .fsel{position:absolute}}
+/* 친밀도 하트: 이름표 오른쪽 위 모서리에 걸쳐서(줄바꿈 없이) */
+.hname{overflow:visible}
+.hname .fh{position:absolute;top:0;right:-2px;transform:translateY(-62%) rotate(6deg);margin:0;font-size:.95em;line-height:1;letter-spacing:-.08em;white-space:nowrap;pointer-events:none;
+  color:#FF7A98;text-shadow:0 0 0 #fff,1.2px 0 0 #fff,-1.2px 0 0 #fff,0 1.2px 0 #fff,0 -1.2px 0 #fff,1px 1px 0 #fff,-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,0 1.5px 2px rgba(0,0,0,.25)}
 </style>
 
 <div class="app" id="app" data-sky="day" data-scr="scrMenu">
