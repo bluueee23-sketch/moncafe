@@ -2358,6 +2358,14 @@ function sayOf(key,pr){
   const k=key+':'+s.at;if(!(k in sayLocal))sayLocal[k]=Date.now();
   const tt=s.t.trim();return Date.now()-sayLocal[k]<SAY_MS?(tt.length>20?tt.slice(0,19)+'…':tt):null;
 }
+const STAT_MS=3500,statSeen={};
+// 처음 본 상태는 띄우지 않아요(들어오자마자 말풍선이 한꺼번에 뜨지 않게). 바뀐 뒤 STAT_MS 동안만 true
+function statFlash(key,s){
+  const o=statSeen[key];
+  if(!o){statSeen[key]={s,at:0};return false}
+  if(o.s!==s){o.s=s;o.at=Date.now()}
+  return Date.now()-o.at<STAT_MS;
+}
 let rendering=false,again=false;
 async function renderFriends(){
   if(rendering){again=true;return}rendering=true;
@@ -2410,7 +2418,10 @@ async function renderFriends(){
       e.name=(typeof e.pr.nick==='string'&&e.pr.nick.trim()?e.pr.nick.trim().slice(0,12):'')||(pf&&pf.name)||(e.isMe?'나':'손님');
       e.avatar=pf&&pf.avatarUrl&&pf.name?pf.avatarUrl:null;e.color=(pf&&pf.color)||hashColor(e.peer);
       e.rem=e.isNpc?null:e.isMe?(e.pr.st==='study'||e.pr.st==='break'?Math.max(0,Math.round((e.pr.end-Date.now())/1000)):e.pr.rem):remOf(e.raw);
-      const say=sayOf(e.key,e.pr);e.say=!!say;e.bub=say||(e.isNpc?'':autoBubble(e.pr,e.rem));e.bubS=say||(e.isNpc?'':shortBubble(e.pr,e.rem));
+      // 상태(마시는 중 등)는 테이블 위 컵 그림으로 보여주고, 상태가 바뀐 순간에만 잠깐 말풍선을 띄워요. 채팅은 그대로 떠요
+      const say=sayOf(e.key,e.pr);e.say=!!say;e.stat=e.isNpc?'':autoBubble(e.pr,e.rem);
+      const flash=!e.isNpc&&!say&&statFlash(e.key,shortBubble(e.pr,e.rem));
+      e.bub=say||(flash?e.stat:'');e.bubS=say||(flash?shortBubble(e.pr,e.rem):'');
       if(!e.isMe)names[e.peer]=e.name;
       if(!e.isMe&&!e.isNpc)heardFrom(e);
     }
@@ -2445,7 +2456,7 @@ function tickTimes(){
 }
 function personEl(e){
   const b=document.createElement('button');b.className='who'+(e.isMe?' me':'')+(selKey===e.key?' sel':'');
-  b.setAttribute('aria-label',e.name+': '+e.bub);
+  b.setAttribute('aria-label',e.name+': '+(e.bub||e.stat||''));
   const bub=document.createElement('span');bub.className='bub'+(e.say?' say':'');bub.textContent=e.bub;
   if(lastBub[e.key]!==e.bub){bub.classList.add('pop');lastBub[e.key]=e.bub}
   const av=document.createElement('span');av.className='mmsp';av.innerHTML=spriteSVG(e.pr.look,e.peer);
@@ -2547,7 +2558,7 @@ function hudPerson(e,x,headY,nameY,hit,side){
   const kind=e.isNpc?' ai':e.isStaff?' staffb':e.say?' say':' st';
   return (e.bub?`<span class="bub hb ${side||'mid'}${kind}${pop?' pop':''}" style="${pct(x,headY)}"><span class="lg">${esc(e.bub)}</span><span class="sh">${esc(e.bubS)}</span></span>`:'')+
     `<span class="hname${e.isMe?' me':''}${e.isStaff?' staff':e.isNpc?' npc':' human'}" style="${pct(Math.min(Math.max(x,VX+70),VX+VBW-70),nameY)};max-width:${((116*TS-10)/VBW*100).toFixed(2)}%"><span class="nl">${e.isStaff?`<i class="aib stf">${e.badge||'직원'}</i>`:e.isNpc?'<i class="aib">AI</i>':'<i class="dot"></i>'+(typeof isOwnerPeer==='function'&&isOwnerPeer(e.peer)?'<i class="aib own">점장</i>':'')}<b class="nm">${esc(e.name)}</b>${!e.isNpc&&!e.isMe&&!e.isStaff?friendHearts(e.peer):''}</span>${e.isStaff?'':`<span class="ftime" data-k="${esc(e.key)}"></span>`}</span>`+(e.isStaff?'':
-    `<button class="hhit${selKey===e.key?' sel':''}" data-k="${esc(e.key)}" aria-label="${esc(e.name+': '+e.bub)}" style="${box(hit[0],hit[1],hit[2],hit[3])}"></button>`);
+    `<button class="hhit${selKey===e.key?' sel':''}" data-k="${esc(e.key)}" aria-label="${esc(e.name+': '+(e.bub||e.stat||''))}" style="${box(hit[0],hit[1],hit[2],hit[3])}"></button>`);
 }
 function drawFloor(taken){
   let bar='',fl='',hud='';
@@ -2559,7 +2570,7 @@ function drawFloor(taken){
     hud+=hudPerson(st,x,BARY-128,BARY+4,null,st.bar?'r':'l');}
   // stack bubbles that would overlap at the same height (per row)
   const placed=[];
-  TABLES.forEach((tb,t)=>{for(const side of[0,1]){const e=taken[2*t+side];if(!e)continue;
+  TABLES.forEach((tb,t)=>{for(const side of[0,1]){const e=taken[2*t+side];if(!e)continue;if(!e.bub){e.lift=0;e.sd=(tb.cx+(side?58:-58)*TS)<VX+130?'r':(tb.cx+(side?58:-58)*TS)>VX+VBW-130?'l':side?'r':'l';continue}
     const hx=tb.cx+(side?58:-58)*TS,sd=hx<VX+130?'r':hx>VX+VBW-130?'l':side?'r':'l',w=[...e.bub].length*12.5*(VBW/1000)+26;
     const span=sd==='l'?[hx-.78*w,hx+.22*w]:[hx-.22*w,hx+.78*w];
     let lv=0;while(placed.some(p=>p.fy===tb.fy&&p.lv===lv&&p.a<span[1]+6&&span[0]<p.b+6))lv++;
