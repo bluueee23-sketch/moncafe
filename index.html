@@ -161,6 +161,7 @@ h1:hover,h1:focus{border-bottom-color:var(--line)}
   display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;color:var(--board-ink);transition:transform .15s,background .15s}
 .mcard:hover{background:rgba(255,255,255,.09);transform:translateY(-2px)}
 .mcard svg{width:84px;height:104px}
+.mc-in,.mc-tx{display:contents}
 .mcard .nm{font-family:var(--display);font-size:17px;line-height:1.25}
 .mcard .pr{font-family:var(--mono);font-size:12px;color:var(--board-muted)}
 .tag{font-size:11px;border-radius:99px;padding:0 7px;margin-top:4px}
@@ -854,6 +855,52 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
   #scrDone #dActs{grid-row:5;grid-column:1/-1;gap:8px}
   #scrDone #dActs .btn{flex:1 1 auto;white-space:nowrap;padding-inline:12px;font-size:14.5px}
 }
+
+/* 오늘의 메뉴: 웹에서 스크롤 없이, 남는 칸 없이 꽉 차게 */
+@media (min-width:820px){
+  .app > #scrMenu{overflow:hidden;display:flex;flex-direction:column;padding-right:0}
+  #scrMenu .board{flex:1;min-height:0;display:flex;flex-direction:column}
+  #scrMenu .board-head{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px 12px;margin-bottom:10px}
+  #scrMenu .board-head > div:first-child{min-width:0}
+  #scrMenu .bhbtns{display:contents}
+  #scrMenu #takeOrder{grid-column:2;grid-row:1;width:100%}
+  #scrMenu #autoBrew{grid-column:1/-1;grid-row:2;width:100%;flex-direction:row;align-items:baseline;justify-content:space-between;gap:10px;white-space:nowrap;overflow:hidden}
+  #scrMenu #autoBrew small{margin:0;overflow:hidden;text-overflow:ellipsis}
+  #scrMenu .menu{flex:1;min-height:0;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:8px}
+  #scrMenu .mcard{min-height:0;padding:0;overflow:hidden;container-type:size;display:block}
+  #scrMenu .mc-in{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:100%;height:100%;box-sizing:border-box;padding:8px 6px}
+  #scrMenu .mc-tx{display:flex;flex-direction:column;align-items:center;gap:2px;flex:none;max-width:100%;min-width:0}
+  #scrMenu .mcard svg{flex:1 1 0;min-height:0;width:100%;height:auto;max-height:104px}
+  #scrMenu .mcard .nm{font-size:15.5px;line-height:1.2;max-width:100%}
+  #scrMenu .mcard .pr{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  #scrMenu .tag{margin-top:3px}
+  @container (max-height:150px){#scrMenu .mcard .pr{display:none}}
+  /* 낮은 화면: 잔은 왼쪽, 이름은 오른쪽 */
+  @container (max-height:112px) and (max-width:149.9px){
+    #scrMenu .mc-in{padding:5px 4px}
+    #scrMenu .mcard .nm{font-size:13px}
+    #scrMenu .tag{display:none}
+  }
+  @container (max-height:112px) and (min-width:150px){
+    #scrMenu .mc-in{flex-direction:row;justify-content:flex-start;gap:6px;padding:6px 8px}
+    #scrMenu .mcard svg{flex:0 0 30%;width:30%;height:100%;max-height:72px}
+    #scrMenu .mc-tx{flex:1 1 0;align-items:flex-start;text-align:left}
+    #scrMenu .mcard .nm{font-size:13.5px;text-align:left}
+    #scrMenu .tag{margin-top:2px}
+  }
+  @container (max-height:64px){#scrMenu .tag{display:none}}
+  @container (max-height:80px){#scrMenu .mcard svg{display:none}}
+}
+/* 폰: 9잔을 3칸씩 3줄, 빈 칸 없이 */
+@media (max-width:819px){
+  #scrMenu .menu{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  #scrMenu .mcard{padding:8px 4px 10px}
+  #scrMenu .mcard svg{width:min(70px,100%);height:auto;aspect-ratio:200/250}
+  #scrMenu .mcard .nm{font-size:14px;line-height:1.2}
+  #scrMenu .mcard .pr{font-size:10.5px;white-space:nowrap}
+}
+@media (max-width:359px){#scrMenu .mcard .pr{display:none}}
+@media (max-width:819px){#scrMenu .bhbtns{display:grid;grid-template-columns:1fr 1fr;width:100%;gap:8px}#scrMenu .bhbtns .btn{width:100%;min-width:0;justify-content:center}#scrMenu .bhbtns .btn.ask{align-items:center;text-align:center}#scrMenu .bhbtns .btn{font-size:15px;padding:9px 8px;word-break:keep-all;line-height:1.2}#scrMenu .bhbtns .btn.ask small{word-break:keep-all}}
 </style>
 
 <div class="app" id="app" data-sky="day" data-scr="scrMenu">
@@ -1107,7 +1154,7 @@ function renderLedger(){
   rows.innerHTML=top?`<span>내 최애 음료</span><b>${String(top[0]).replace(/[&<>]/g,'')}</b><span class="n">${top[1]}잔째</span>`:'<span>내 최애 음료</span><b>아직 없어요</b><span class="n">첫 잔을 만들어 볼까요?</span>';
 }
 function renderMenu(){
-  $('menu').innerHTML=R.filter(r=>!r.special).map(r=>{const i=ideal(r);return `<button class="mcard" data-id="${r.id}">${cupSVG(i.kind,i.L,{ice:i.ice,straw:r.ice})}<span class="nm">${r.n}</span><span class="pr">${won(r.p)} · ${r.steps.length}단계</span><span class="tag ${r.ice?'ice':'hot'}">${r.ice?'ICE':'HOT'}</span></button>`}).join('');
+  $('menu').innerHTML=R.filter(r=>!r.special).map(r=>{const i=ideal(r);return `<button class="mcard" data-id="${r.id}"><span class="mc-in">${cupSVG(i.kind,i.L,{ice:i.ice,straw:r.ice})}<span class="mc-tx"><span class="nm">${r.n}</span><span class="pr">${won(r.p)} · ${r.steps.length}단계</span><span class="tag ${r.ice?'ice':'hot'}">${r.ice?'ICE':'HOT'}</span></span></span></button>`}).join('');
   $('menu').querySelectorAll('.mcard').forEach(b=>b.onclick=()=>startOrder(R.find(r=>r.id===b.dataset.id),null));
   renderLedger();
 }
