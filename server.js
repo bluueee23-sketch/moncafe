@@ -136,7 +136,11 @@ function getWorld(room) {
 function humanSeats(room) {
   const members = [...(rooms.get(room) || new Map()).entries()]
     .filter(([, m]) => !(m.state && (m.state.st === 'making' || m.state.st === 'done')))
-    .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+    .sort((a, b) => {
+      const v = (m) => (Number.isInteger(m.state && m.state.seat) && m.state.seat >= 0 && m.state.seat < SEATS ? 1 : 0);
+      const t = (m) => +(m.state && m.state.sa) || 9e15;
+      return (v(b[1]) - v(a[1])) || (t(a[1]) - t(b[1])) || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
+    });
   const taken = {}, seatOf = {};
   for (const [id, m] of members) {
     let s = Number.isInteger(m.state && m.state.seat) && m.state.seat >= 0 && m.state.seat < SEATS ? m.state.seat : -1;

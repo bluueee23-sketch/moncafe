@@ -1631,7 +1631,7 @@ $('machine').onclick=()=>{if(!canLeave())return;$('takeOrder').click()};
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(tTimer);tTimer=setTimeout(()=>e.classList.remove('on'),3800)}
 function myPeer(){return ROOM?ROOM.peers().find(p=>p.sameTab)?.peer:null}
 function presenceState(){
-  const d=day(),o={nick,cups:d.cups.length,focus:d.focus,st:'menu',d:null,dur:null,end:null,rem:null,seat:mySeat,say:mySay,look:lookOut()};
+  const d=day(),o={nick,cups:d.cups.length,focus:d.focus,st:'menu',d:null,dur:null,end:null,rem:null,seat:mySeat,sa:mySeatAt,say:mySay,look:lookOut()};
   if(AUTOBREW&&AUTOBREW.self){o.st='making';o.d='jc';return o}
   if(AB&&AB.del>Date.now())o.ab=[AB.until,AB.del];
   if(CUR==='scrMenu'&&MADE){o.st='hold';o.d=MADE.r.id;o.left=Math.round((MADE.left??1)*100)/100}
@@ -2223,7 +2223,7 @@ setInterval(quietLabel,1000);quietLabel();
 
 /* hall: seats, bubbles */
 const SEATS=12,SAY_MS=8000;
-let mySeat=null,mySay=null,selKey=null,lastSig='',lastBub={},sayLocal={},PEOPLE=[];
+let mySeatAt=Date.now(),mySeat=null,mySay=null,selKey=null,lastSig='',lastBub={},sayLocal={},PEOPLE=[];
 try{const v=localStorage.getItem('barista.seat');if(v!=null&&v!=='')mySeat=+v}catch(e){}
 const PAL=['#C0603F','#3F7FA0','#7A5BA8','#3D8B66','#B4842A','#A04867','#4E6E9C','#6C7F3A'];
 function hashColor(s){let h=0;for(const ch of String(s))h=(h*31+ch.charCodeAt(0))|0;return PAL[Math.abs(h)%PAL.length]}
@@ -2271,11 +2271,22 @@ async function renderFriends(){
     // seats: same order on every screen, so everyone sees the same seating
     const atBar=ppl.filter(e=>e.pr.st==='making'||e.pr.st==='done').slice(0,2);atBar.forEach((e,i)=>e.bar=i);
     const taken={};
-    [...ppl].filter(e=>!(e.pr.st==='making'||e.pr.st==='done')).sort((a,b)=>a.peer<b.peer?-1:a.peer>b.peer?1:0).forEach(e=>{
-      let s=Number.isInteger(e.pr.seat)&&e.pr.seat>=0&&e.pr.seat<SEATS?e.pr.seat:-1;
+    // 먼저 앉은 사람이 자리 주인이에요(sa = 그 자리에 앉은 시각). 겹치거나 자리가 없는 사람은 잠깐 빈자리에 두고, 본인이 곧 빈자리 중 하나를 골라 옮겨 앉아요
+    const valid=e=>Number.isInteger(e.pr.seat)&&e.pr.seat>=0&&e.pr.seat<SEATS;
+    const seated=[...ppl].filter(e=>!(e.pr.st==='making'||e.pr.st==='done'));
+    seated.sort((a,b)=>(valid(b)-valid(a))||((+a.pr.sa||9e15)-(+b.pr.sa||9e15))||(a.peer<b.peer?-1:a.peer>b.peer?1:0)).forEach(e=>{
+      let s=valid(e)?e.pr.seat:-1;
       if(s<0||taken[s]){s=-1;for(let i=0;i<SEATS;i++)if(!taken[i]){s=i;break}}
       if(s>=0)taken[s]=e;e.seat=s;
     });
+    {const me=ppl[0];
+     if(ROOM&&!roomDead&&me.bar==null&&!(me.pr.st==='making'||me.pr.st==='done')&&(mySeat==null||me.seat!==mySeat)){
+       const human=new Set(Object.keys(taken).filter(k=>taken[k]!==me).map(Number));
+       const npc=new Set(NPCS.map(n=>n.seat).filter(x=>x!=null));
+       let free=[];for(let i=0;i<SEATS;i++)if(!human.has(i)&&!npc.has(i))free.push(i);
+       if(!free.length)for(let i=0;i<SEATS;i++)if(!human.has(i))free.push(i);
+       if(free.length){const n=free[Math.random()*free.length|0];claimSeat(n);if(taken[me.seat]===me)delete taken[me.seat];taken[n]=me;me.seat=n;me.pr.seat=n;me.pr.sa=mySeatAt;setTimeout(syncPresence,0)}
+     }}
     const real=ppl.length;
     for(const n of NPCS){
       let s=n.seat!=null&&!taken[n.seat]?n.seat:-1;
@@ -2468,7 +2479,7 @@ function drawFloor(taken){
 }
 $('hud').addEventListener('click',ev=>{
   const s=ev.target.closest('[data-seat]');
-  if(s){mySeat=+s.dataset.seat;try{localStorage.setItem('barista.seat',String(mySeat))}catch(_){}const wasNpc=s.classList.contains('npcseat');setPick(false);syncPresence();lastSig='';renderFriends();
+  if(s){claimSeat(+s.dataset.seat);const wasNpc=s.classList.contains('npcseat');setPick(false);syncPresence();lastSig='';renderFriends();
     toast(wasNpc?`손님이 자리를 비켜줬어요. ${mySeat+1}번 자리로 옮겼어요.`:`${mySeat+1}번 자리로 옮겼어요.`);return}
   const h=ev.target.closest('.hhit');if(!h)return;
   const e=PEOPLE.find(x=>x.key===h.dataset.k);if(!e)return;
@@ -2522,11 +2533,12 @@ function showSel(){
   mk('옆자리 앉기','',()=>sitNext(e));
   mk('음료 뺏어먹기','sit',()=>stealDrink(e));
 }
+function claimSeat(n){mySeat=n;mySeatAt=Date.now();try{localStorage.setItem('barista.seat',String(n))}catch(_){}}
 function sitNext(e,quiet){
   if(e.seat==null||e.seat<0){toast(`${e.name}님이 아직 자리에 안 앉았어요.`);return false}
   const nb=e.seat%2?e.seat-1:e.seat+1;
   if(PEOPLE.some(x=>!x.isMe&&!x.isNpc&&x.seat===nb)){toast(`${e.name}님 옆자리에 이미 다른 친구가 있어요.`);return false}
-  mySeat=nb;try{localStorage.setItem('barista.seat',String(nb))}catch(_){}
+  claimSeat(nb);
   syncPresence();lastSig='';renderFriends();
   if(!quiet){sendCheer(e.peer,'sit');toast(`${e.name}님 옆자리로 옮겼어요.`)}
   return true;
