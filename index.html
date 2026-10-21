@@ -928,6 +928,11 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
 #meterWrap{align-self:stretch;width:100%;box-sizing:border-box}
 #meterWrap .meter{height:18px}
 #meterWrap .meter-scale{margin-top:3px;gap:8px}
+/* 박소금 직원 이름표 */
+.hname.staff{background:#8A5A3C;color:#FFF8EC;opacity:1;border-radius:9px}
+.aib.stf{background:#F2C46B;color:#5A3A1C}
+.bub.hb.staffb{background:#FFF3DF;border-color:#C99A5B;color:#5A3A1C}
+.bub.hb.staffb::after{border-top-color:#FFF3DF}
 </style>
 
 <div class="app" id="app" data-sky="day" data-scr="scrMenu">
@@ -1135,6 +1140,7 @@ const CUBES=[[80,178,-8],[114,184,10],[92,146,14],[122,140,-6],[74,112,6],[110,1
 let clipN=0;
 const rgba=c=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${c[3]})`;
 function cupSVG(kind,layers,o={}){
+  if(kind==='icecup'&&(o.frap||layers.frap))return frapSVG(o);
   if(!kind) return `<svg viewBox="0 0 200 250" aria-hidden="true"><rect x="40" y="200" width="120" height="30" rx="6" fill="none" stroke="var(--line)" stroke-width="2" stroke-dasharray="6 6"/><text x="100" y="190" text-anchor="middle" font-size="14" fill="var(--muted)" font-family="var(--body)">컵을 먼저 꺼내요</text></svg>`;
   const g=GEO[kind],id='cc'+(++clipN),f=o.f??1;
   const y=l=>g.yb-l/100*(g.yb-g.yt);
@@ -1157,12 +1163,43 @@ function cupSVG(kind,layers,o={}){
   const st=o.steam?`<g class="steam"><path d="M80 ${top-6} q-8 -12 0 -24 q8 -12 0 -24"/><path d="M100 ${top-4} q-8 -12 0 -24 q8 -12 0 -24"/><path d="M120 ${top-6} q-8 -12 0 -24 q8 -12 0 -24"/></g>`:'';
   return `<svg viewBox="0 0 200 250" aria-hidden="true"><defs><clipPath id="${id}"><path d="${g.clip}"/></clipPath></defs>${straw}<path d="${g.clip}" fill="var(--glass)"/><g clip-path="url(#${id})">${liq}${cubes}${band}</g>${outline}${extra}${st}</svg>`;
 }
+/* 자바칩 프라푸치노: 갈아서 만든 음료라 얼음 큐브 대신 자바칩, 위에는 휘핑 크림 + 초코 드리즐 + 돔 뚜껑 */
+const CHIPS=[[78,206],[101,214],[124,203],[88,186],[113,190],[132,178],[71,168],[97,160],[121,152],[82,138],[108,128],[130,116],[74,104],[99,92],[123,80],[86,66],[111,58]];
+function frapSVG(o){
+  const g=GEO.icecup,id='cc'+(++clipN),f=Math.max(0,Math.min(1,o.f??1));
+  const lv=97*f,yTop=g.yb-lv/100*(g.yb-g.yt);
+  const mocha='#8A5A3C',light='#A9774F',choc='#3B2216',cream='#FFF6EA';
+  let body='';
+  if(lv>0.5){
+    body+=`<rect x="0" y="${yTop.toFixed(1)}" width="200" height="${(g.yb-yTop+4).toFixed(1)}" fill="${mocha}"/>`;
+    body+=`<path d="M0 ${(yTop+10).toFixed(1)} Q50 ${(yTop+2).toFixed(1)} 100 ${(yTop+12).toFixed(1)} T200 ${(yTop+8).toFixed(1)} V250 H0Z" fill="${light}" opacity=".35"/>`;
+    // 컵 안쪽 벽에 흘러내린 초코 시럽
+    body+=`<path d="M52 ${(yTop+4).toFixed(1)} q4 30 -1 60 q-3 26 3 50 M147 ${(yTop+4).toFixed(1)} q-5 34 1 64 q4 24 -3 46 M70 ${(yTop+2).toFixed(1)} q3 18 -2 34" fill="none" stroke="${choc}" stroke-width="4" stroke-linecap="round" opacity=".55"/>`;
+    for(const[cx,cy]of CHIPS)if(cy>yTop+5)body+=`<rect x="${cx-3.5}" y="${cy-2.5}" width="7" height="5" rx="1.5" transform="rotate(${(cx*7)%40-20} ${cx} ${cy})" fill="${choc}"/>`;
+    body+=`<rect x="0" y="${yTop.toFixed(1)}" width="200" height="2.5" fill="rgba(255,255,255,.35)"/>`;
+  }
+  // 휘핑 크림: 마실수록 줄어들어요
+  const c=Math.max(0,Math.min(1,(f-.3)/.7));let whip='';
+  if(c>0.02){
+    const h=32*c,base=Math.max(33,yTop+3);
+    whip=`<g><path d="M48 ${base} C46 ${base-h*.55} 66 ${base-h*.8} 74 ${base-h*.75} C78 ${base-h*1.05} 96 ${base-h*1.15} 104 ${base-h*.98} C112 ${base-h*1.12} 132 ${base-h*.95} 132 ${base-h*.7} C146 ${base-h*.72} 156 ${base-h*.45} 152 ${base} Z" fill="#FFFDF8" stroke="#D8BFA0" stroke-width="2.2"/>`+
+      `<path d="M66 ${base-h*.42} q10 -${(h*.2).toFixed(1)} 22 0 M96 ${base-h*.62} q12 -${(h*.22).toFixed(1)} 24 0 M112 ${base-h*.3} q10 -${(h*.16).toFixed(1)} 22 0" fill="none" stroke="#D8BFA0" stroke-width="2" stroke-linecap="round"/>`+
+      `<path d="M60 ${base-h*.5} L74 ${base-h*.85} L86 ${base-h*.45} L98 ${base-h*.95} L110 ${base-h*.5} L122 ${base-h*.85} L136 ${base-h*.45}" fill="none" stroke="${choc}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`+
+      (c>.45?`<rect x="80" y="${(base-h*.7).toFixed(1)}" width="6" height="4" rx="1" fill="${choc}" transform="rotate(20 83 ${(base-h*.7).toFixed(1)})"/><rect x="117" y="${(base-h*.62).toFixed(1)}" width="6" height="4" rx="1" fill="${choc}" transform="rotate(-25 120 ${(base-h*.62).toFixed(1)})"/>`:'')+`</g>`;
+    whip=`<g clip-path="url(#${id}w)">${whip}</g>`;
+  }
+  const outline=`<path d="${g.clip}" fill="none" stroke="var(--cupline)" stroke-width="3" stroke-linejoin="round"/>`;
+  const lid=`<path d="M42 31 Q100 -22 158 31" fill="rgba(255,255,255,.1)" stroke="var(--cupline)" stroke-width="2.5"/><line x1="38" x2="162" y1="31" y2="31" stroke="var(--cupline)" stroke-width="5" stroke-linecap="round"/>`;
+  const straw=o.straw!==0?`<path d="M114 214 L134 -8" stroke="#2F7A5A" stroke-width="10" stroke-linecap="round"/><path d="M114 214 L134 -8" stroke="rgba(255,255,255,.25)" stroke-width="3" stroke-linecap="round" transform="translate(-2 0)"/>`:'';
+  return `<svg viewBox="0 0 200 250" aria-hidden="true" style="overflow:visible"><defs><clipPath id="${id}"><path d="${g.clip}"/></clipPath><clipPath id="${id}w"><path d="${g.clip}"/><path d="M42 32 Q100 -21 158 32Z"/></clipPath></defs><path d="${g.clip}" fill="var(--glass)"/><g clip-path="url(#${id})">${body}</g>${straw}${outline}${whip}${lid}</svg>`;
+}
 function ideal(r){
   let L=[],ice=0,kind=null;const lvl=()=>L.reduce((s,x)=>s+x.a,0);
   const add=(ing,a)=>{const t=L.at(-1);if(t&&t.ing===ing)t.a+=a;else L.push({ing,a,c:ING[ing].c.slice()})};
   for(const s of r.steps){
     if(s.t==='cup')kind=s.ing;else if(s.t==='tap'){if(s.ing==='ice')ice+=s.n;else if(s.add)add(s.ing,s.add*s.n)}
     else if(s.t==='pour'){add(s.ing,(s.min+s.max)/2-lvl());if(s.mix)L=[{ing:'mix',a:lvl(),c:(s.mix==='mid'?r.midC:r.mixC).slice()}]}}
+  if(r.id==='jc')L.frap=1;
   return{kind,L,ice};
 }
 
@@ -1566,6 +1603,7 @@ setTimeout(()=>{const b=$('bgmBtn');if(b){b.onclick=()=>setBgm(!noise);if(!BGM)n
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.running)renderStudy()});
 
 /* ---------- friends (room) ---------- */
+let STAFF=[],SALT_LOOK=(()=>{try{return JSON.parse(localStorage.getItem('barista.saltLook')||'null')}catch(e){return null}})()||{h:1,hc:0,sc:3,pc:2,sk:0,ts:0,ac:0,ey:0};
 let ROOM=null,USER=null,roomDead=false,names={},seenCheer={},nick='',tTimer=0;
 try{nick=localStorage.getItem('barista.nick')||''}catch(e){}
 $('nick').value=nick;
@@ -1594,7 +1632,8 @@ function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clear
 function myPeer(){return ROOM?ROOM.peers().find(p=>p.sameTab)?.peer:null}
 function presenceState(){
   const d=day(),o={nick,cups:d.cups.length,focus:d.focus,st:'menu',d:null,dur:null,end:null,rem:null,seat:mySeat,say:mySay,look:lookOut()};
-  if(AUTOBREW){o.st='making';o.d='jc';return o}
+  if(AUTOBREW&&AUTOBREW.self){o.st='making';o.d='jc';return o}
+  if(AB&&AB.del>Date.now())o.ab=[AB.until,AB.del];
   if(CUR==='scrMenu'&&MADE){o.st='hold';o.d=MADE.r.id;o.left=Math.round((MADE.left??1)*100)/100}
   else if(CUR==='scrBar'&&C){o.st='making';o.d=C.r.id}
   else if(CUR==='scrDone'&&MADE){o.st='done';o.d=MADE.r.id}
@@ -2123,19 +2162,25 @@ function jdInit(){
 
 
 /* ---------- ask myself: the special Java chip frappuccino, made for me ---------- */
-let AUTOBREW=null;
-function autoBrewLabel(){const el=$('autoBrewLbl');if(el)el.textContent='박소금에게 시키기'}
+let AUTOBREW=null,AB=null;
+const SALT='박소금',AB_MAKE=6000,AB_DELIVER=4500;
+const isSalt=()=>typeof nick==='string'&&nick.trim()===SALT;
+function autoBrewLabel(){const el=$('autoBrewLbl');if(el)el.textContent=SALT+'에게 시키기'}
 function autoBrew(){
   if(CUR==='scrStudy'&&S.running){toast('공부 중엔 시킬 수 없어요. 타이머를 멈추거나 휴게를 끝내요.');return}
   if(AUTOBREW)return;
-  const r=byId('jc');AUTOBREW={until:Date.now()+3600};$('autoBrew').disabled=true;
-  toast(`${(typeof nick==='string'&&nick)||'나'}(나)가 자바칩 프라푸치노 만드는 중…`);syncPresence();lastSig='';renderFriends();
+  const r=byId('jc'),now=Date.now(),self=isSalt();
+  AUTOBREW={until:now+AB_MAKE,self};AB=self?null:{until:now+AB_MAKE,del:now+AB_MAKE+AB_DELIVER};
+  $('autoBrew').disabled=true;
+  toast(self?'박소금(나)이 자바칩 프라푸치노 만드는 중…':'박소금이 바에서 자바칩 프라푸치노 만드는 중… 자리에서 기다려요');
+  syncPresence();lastSig='';renderFriends();
   setTimeout(()=>{
     AUTOBREW=null;$('autoBrew').disabled=false;
     const i=ideal(r);MADE={r,kind:i.kind,L:i.L,ice:i.ice,st:3,idx:-1,left:1};
     const d=day();d.cups.push({n:r.n,st:3,at:hhmm(),guest:null,tip:0,min:0,ordered:1});save();MADE.idx=d.cups.length-1;saveCup();
-    renderLedger();toast('자바칩 프라푸치노 완성! 휴게석으로 가져갈게요.');openStudy();
-  },3600);
+    renderLedger();toast(self?'자바칩 프라푸치노 완성! 휴게석으로 가져갈게요.':'박소금: 주문하신 자바칩 프라푸치노 나왔습니다~');openStudy();
+    setTimeout(()=>{if(AB&&Date.now()>=AB.del){AB=null;syncPresence();lastSig='';renderFriends()}},AB_DELIVER+200);
+  },AB_MAKE);
 }
 $('autoBrew').onclick=autoBrew;
 setTimeout(autoBrewLabel,0);
@@ -2240,6 +2285,15 @@ async function renderFriends(){
       const e={key:n.key,isMe:false,isNpc:true,npc:n,peer:n.key,by:null,seat:s,pr:{nick:n.name,look:n.look,st:n.st==='finished'?'finished':'hold',d:n.d,left:n.left,say:n.say}};
       taken[s]=e;ppl.push(e);
     }
+    // 박소금 직원: 누가 시키면 바에서 만들고, 다 되면 그 사람 자리로 가져가요
+    {const now=Date.now(),sl=ppl.find(e=>!e.isNpc&&typeof e.pr.nick==='string'&&e.pr.nick.trim()===SALT);
+     if(sl&&sl.pr.look){SALT_LOOK=sl.pr.look;try{localStorage.setItem('barista.saltLook',JSON.stringify(sl.pr.look))}catch(_){}}
+     STAFF=[];const used=new Set(ppl.filter(e=>e.bar!=null).map(e=>e.bar));
+     for(const e of ppl){const ab=e.pr.ab;if(!Array.isArray(ab)||!(ab[1]>now))continue;
+       const making=now<ab[0];const st={key:'staff:'+e.key,isStaff:true,peer:'staff',name:SALT,for:e,pr:{look:SALT_LOOK,st:'making',d:'jc'}};
+       if(making){const b=[0,1].find(i=>!used.has(i));if(b==null)continue;used.add(b);st.bar=b;st.bub=st.bubS='자바칩 프라푸치노 만드는 중…'}
+       else{if(e.seat==null||e.seat<0)continue;st.to=e.seat;st.bub=(e.isMe?'주문하신 ':e.name+'님, ')+'자바칩 프라푸치노 나왔습니다~';st.bubS='배달 왔어요~'}
+       STAFF.push(st)}}
     for(const e of ppl){
       const pf=e.by?prof[e.by]:null;
       e.name=(typeof e.pr.nick==='string'&&e.pr.nick.trim()?e.pr.nick.trim().slice(0,12):'')||(pf&&pf.name)||(e.isMe?'나':'손님');
@@ -2250,7 +2304,7 @@ async function renderFriends(){
       if(!e.isMe&&!e.isNpc)heardFrom(e);
     }
     PEOPLE=ppl;
-    const sig=JSON.stringify(ppl.map(e=>[e.key,e.seat,e.bar,e.isNpc||e.isMe?0:friendLv(e.peer).lv,e.rem!=null&&e.pr.st==='study',e.name,e.pr.look,e.bub,e.say,e.pr.d,e.pr.st,Math.round((leftOf(e)??0)*20)]))+selKey;
+    const sig=JSON.stringify(STAFF.map(e=>[e.key,e.bar,e.to]))+JSON.stringify(ppl.map(e=>[e.key,e.seat,e.bar,e.isNpc||e.isMe?0:friendLv(e.peer).lv,e.rem!=null&&e.pr.st==='study',e.name,e.pr.look,e.bub,e.say,e.pr.d,e.pr.st,Math.round((leftOf(e)??0)*20)]))+selKey;
     if(sig!==lastSig){lastSig=sig;drawFloor(taken)}
     tickTimes();
     const others=real-1,nN=ppl.length-real;
@@ -2369,16 +2423,19 @@ const box=(x,y,w,h)=>`${pct(x,y)};width:${(w/VBW*100).toFixed(2)}%;height:${(h/V
 function hudPerson(e,x,headY,nameY,hit,side){
   headY-=(e.lift||0)*30;
   const pop=lastBub[e.key]!==e.bub;lastBub[e.key]=e.bub;
-  const kind=e.isNpc?' ai':e.say?' say':' st';
+  const kind=e.isNpc?' ai':e.isStaff?' staffb':e.say?' say':' st';
   return (e.bub?`<span class="bub hb ${side||'mid'}${kind}${pop?' pop':''}" style="${pct(x,headY)}"><span class="lg">${esc(e.bub)}</span><span class="sh">${esc(e.bubS)}</span></span>`:'')+
-    `<span class="hname${e.isMe?' me':''}${e.isNpc?' npc':' human'}" style="${pct(Math.min(Math.max(x,VX+70),VX+VBW-70),nameY)};max-width:${((116*TS-10)/VBW*100).toFixed(2)}%"><span class="nl">${e.isNpc?'<i class="aib">AI</i>':'<i class="dot"></i>'}<b class="nm">${esc(e.name)}</b>${!e.isNpc&&!e.isMe?friendHearts(e.peer):''}</span><span class="ftime" data-k="${esc(e.key)}"></span></span>`+
-    `<button class="hhit${selKey===e.key?' sel':''}" data-k="${esc(e.key)}" aria-label="${esc(e.name+': '+e.bub)}" style="${box(hit[0],hit[1],hit[2],hit[3])}"></button>`;
+    `<span class="hname${e.isMe?' me':''}${e.isStaff?' staff':e.isNpc?' npc':' human'}" style="${pct(Math.min(Math.max(x,VX+70),VX+VBW-70),nameY)};max-width:${((116*TS-10)/VBW*100).toFixed(2)}%"><span class="nl">${e.isStaff?'<i class="aib stf">직원</i>':e.isNpc?'<i class="aib">AI</i>':'<i class="dot"></i>'}<b class="nm">${esc(e.name)}</b>${!e.isNpc&&!e.isMe&&!e.isStaff?friendHearts(e.peer):''}</span>${e.isStaff?'':`<span class="ftime" data-k="${esc(e.key)}"></span>`}</span>`+(e.isStaff?'':
+    `<button class="hhit${selKey===e.key?' sel':''}" data-k="${esc(e.key)}" aria-label="${esc(e.name+': '+e.bub)}" style="${box(hit[0],hit[1],hit[2],hit[3])}"></button>`);
 }
 function drawFloor(taken){
   let bar='',fl='',hud='';
   for(const e of PEOPLE){if(e.bar==null)continue;const x=BARX[e.bar];
     bar+=mmPlace(e,x,BARY-22,{apron:true,face:'focus'});
     hud+=hudPerson(e,x,BARY-128,BARY+4,[x-36,BARY-128,72,128],e.bar?'r':'l');}
+  for(const st of STAFF){if(st.bar==null)continue;const x=BARX[st.bar];
+    bar+=mmPlace(st,x,BARY-22,{apron:true,face:'focus'});
+    hud+=hudPerson(st,x,BARY-128,BARY+4,null,st.bar?'r':'l');}
   // stack bubbles that would overlap at the same height (per row)
   const placed=[];
   TABLES.forEach((tb,t)=>{for(const side of[0,1]){const e=taken[2*t+side];if(!e)continue;
@@ -2399,6 +2456,12 @@ function drawFloor(taken){
          if(e.isNpc)hud+=`<button class="hsit npcseat" data-seat="${i}" style="${pct(X,FY-70*TS)}" aria-label="${i+1}번 자리, AI 손님에게 비켜달라고 하기">여기 앉기</button>`;}
       }else hud+=`<button class="hsit" data-seat="${i}" style="${pct(cx+(hx-cx)*TS,FY-46*TS)}" aria-label="${i+1}번 자리에 앉기">앉기</button>`;
     }
+    for(const st of STAFF){if(st.to==null||(st.to>>1)!==t)continue;
+      // 테이블 앞(통로 쪽)에 서서 그 사람 쪽으로 건네줘요
+      const side=st.to&1,face=side?-1:1,sx=cx-face*26,by=FY+40;
+      fl+=mmPlace(st,sx,by,{apron:true,face:'happy'});
+      const jc=byId('jc'),ji=ideal(jc);fl+=cupSVG(ji.kind,ji.L,{straw:1}).replace('<svg viewBox="0 0 200 250"',`<svg x="${sx-face*16-9}" y="${by-62}" width="18" height="22" viewBox="0 0 200 250"`);
+      const X=cx+(sx-cx)*TS;hud+=hudPerson(st,X,FY+(by-FY-108)*TS,FY+(by-FY+6)*TS,null,face>0?'r':'l');}
     fl+='</g>';
   });
   $('dynBar').innerHTML=bar;$('dynFloor').innerHTML=fl;$('hud').innerHTML=hud;
