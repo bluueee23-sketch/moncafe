@@ -64,7 +64,7 @@
 | `realtime.js` | `window.claude.use('room')` 형태의 실시간 연결부. 우선순위: 자체 서버 WebSocket(`/ws`) → Supabase presence(config에 키가 있을 때) → BroadcastChannel(같은 브라우저 탭끼리) |
 | `server.js` | 의존성 없는 Node 서버. 정적 파일, `/healthz`, 직접 구현한 WebSocket. room별 presence, **공유 월드**(AI 손님, 고양이를 서버가 결정해서 모두 똑같이 보여요), 대화 기록 |
 | `index.js` | `require('./server.js')`(Render 기본 시작 명령 대비) |
-| `sw.js` | 오프라인 캐시. **파일을 고치면 `VERSION`을 올려야 해요**(현재 `cafe-v21`) |
+| `sw.js` | 오프라인 캐시. **파일을 고치면 `VERSION`을 올려야 해요**(현재 `cafe-v22`) |
 | `render.yaml`, `package.json` | Render 설정(Build `npm install`, Start `node server.js`, Health `/healthz`) |
 | `manifest.webmanifest`, 아이콘 | 홈 화면 추가(PWA) |
 

@@ -514,6 +514,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
 .hname .nl>i,.hname .fh{flex:none}
 .hname.human{border-radius:9px;padding-top:1px;padding-bottom:1px}
 .hname .ftime:empty{display:none}
+.hname .ftime{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;font-family:inherit}
 .hhit{position:absolute;background:transparent;border:none;border-radius:12px;padding:0;cursor:pointer;z-index:1}
 .hhit:hover{background:rgba(255,255,255,.14)}
 .hhit.sel{box-shadow:0 0 0 2.5px var(--crema);background:rgba(255,230,180,.12)}
@@ -2164,7 +2165,7 @@ function tickTimes(){
   document.querySelectorAll('.ftime').forEach(el=>{
     const e=PEOPLE.find(x=>x.key===el.dataset.k);if(!e)return;
     let r=e.isNpc?null:e.isMe?(e.pr.st==='study'||e.pr.st==='break'?Math.max(0,Math.round((e.pr.end-Date.now())/1000)):e.pr.rem):remOf(e.raw);
-    el.textContent=(e.pr.st==='study'||e.pr.st==='seat')&&r!=null?mmss(r):e.pr.st==='break'&&r!=null?'쉬는 중 '+mmss(r):'';
+    el.textContent=(e.pr.st==='study'||e.pr.st==='seat')&&r!=null?mmss(r):e.pr.st==='break'&&r!=null?'휴식 '+mmss(r):'';
   });
 }
 function personEl(e){
