@@ -993,7 +993,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
           <h2>오늘의 메뉴</h2>
           <p>출근했으면 직원 음료부터! 한 잔 만들어 휴게석에 앉으면 공부 시작. 공부하는 동안 손님이 오면 내가 알아서 만들어 드리고 팁을 받아요.</p>
         </div>
-        <div class="bhbtns"><button class="btn crema" id="takeOrder">손님 주문 받기</button><button class="btn ask" id="autoBrew" title="귀찮을 땐 자바칩 프라푸치노를 자동으로 만들어 줘요"><span id="autoBrewLbl">나에게 시키기</span><small>자바칩 프라푸치노 · 자동</small></button></div>
+        <div class="bhbtns"><button class="btn crema" id="takeOrder">손님 주문 받기</button><button class="btn ask" id="autoBrew" title="귀찮을 땐 자바칩 프라푸치노를 자동으로 만들어 줘요"><span id="autoBrewLbl">박소금에게 시키기</span><small>자바칩 프라푸치노 · 자동</small></button></div>
       </div>
       <div class="menu" id="menu"></div>
     </div>
@@ -2124,7 +2124,7 @@ function jdInit(){
 
 /* ---------- ask myself: the special Java chip frappuccino, made for me ---------- */
 let AUTOBREW=null;
-function autoBrewLabel(){const el=$('autoBrewLbl');if(el)el.textContent=`${(typeof nick==='string'&&nick)||'나'}(나)에게 시키기`}
+function autoBrewLabel(){const el=$('autoBrewLbl');if(el)el.textContent='박소금에게 시키기'}
 function autoBrew(){
   if(CUR==='scrStudy'&&S.running){toast('공부 중엔 시킬 수 없어요. 타이머를 멈추거나 휴게를 끝내요.');return}
   if(AUTOBREW)return;
