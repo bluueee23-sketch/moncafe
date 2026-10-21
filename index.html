@@ -1593,19 +1593,29 @@ function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext
 function ding(){const a=ac();if(!a)return;[880,1320].forEach((fq,i)=>{const o=a.createOscillator(),g=a.createGain();o.frequency.value=fq;o.type='sine';
   g.gain.setValueAtTime(0,a.currentTime+i*.18);g.gain.linearRampToValueAtTime(.18,a.currentTime+i*.18+.02);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+i*.18+1.2);
   o.connect(g).connect(a.destination);o.start(a.currentTime+i*.18);o.stop(a.currentTime+i*.18+1.3)})}
+/* 카페 배경음: 실제 카페 녹음(cafe-ambience.mp3)을 이음새 없이 반복. 못 불러오면 예전 합성 소음으로 */
+let CAFE_BUF=null,cafeLoading=null;
+function loadCafe(a){if(CAFE_BUF)return Promise.resolve(CAFE_BUF);
+  if(!cafeLoading)cafeLoading=fetch('cafe-ambience.mp3').then(r=>{if(!r.ok)throw 0;return r.arrayBuffer()})
+    .then(b=>new Promise((ok,no)=>a.decodeAudioData(b,ok,no))).then(buf=>CAFE_BUF=buf).catch(e=>{cafeLoading=null;throw e});
+  return cafeLoading}
 function startNoise(){const a=ac();if(!a)return;a.resume&&a.resume();
-  const len=a.sampleRate*4,buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);let last=0;
-  for(let i=0;i<len;i++){const w=Math.random()*2-1;last=(last+.02*w)/1.02;d[i]=last*3.2}
-  const src=a.createBufferSource();src.buffer=buf;src.loop=true;
-  const lp=a.createBiquadFilter();lp.type='lowpass';lp.frequency.value=900;
-  const g=a.createGain();g.gain.value=.22;src.connect(lp).connect(g).connect(a.destination);src.start();
-  const clink=setInterval(()=>{if(Math.random()<.35){const o=a.createOscillator(),gg=a.createGain();o.frequency.value=2200+Math.random()*1800;
-    gg.gain.setValueAtTime(.025,a.currentTime);gg.gain.exponentialRampToValueAtTime(.0005,a.currentTime+.4);o.connect(gg).connect(a.destination);o.start();o.stop(a.currentTime+.45)}},2500);
-  noise={src,clink};noiseUI();
+  const g=a.createGain();g.gain.value=0;g.connect(a.destination);
+  const me={src:null,g,clink:0};noise=me;noiseUI();
+  loadCafe(a).then(buf=>{if(noise!==me)return;
+    const src=a.createBufferSource();src.buffer=buf;src.loop=true;src.connect(g);
+    src.start(0,Math.random()*Math.max(1,buf.duration-5));   // 매번 다른 지점부터
+    g.gain.setValueAtTime(0,a.currentTime);g.gain.linearRampToValueAtTime(.7,a.currentTime+2);me.src=src;
+  }).catch(()=>{if(noise!==me)return;
+    const len=a.sampleRate*4,buf=a.createBuffer(1,len,a.sampleRate),d=buf.getChannelData(0);let last=0;
+    for(let i=0;i<len;i++){const w=Math.random()*2-1;last=(last+.02*w)/1.02;d[i]=last*3.2}
+    const src=a.createBufferSource();src.buffer=buf;src.loop=true;const lp=a.createBiquadFilter();lp.type='lowpass';lp.frequency.value=900;
+    g.gain.value=.22;src.connect(lp).connect(g);src.start();me.src=src;
+  });
 }
 function noiseUI(){const on=!!noise;$('sNoise').textContent=on?'카페 소음 끄기':'카페 소음 켜기';$('sNoise').setAttribute('aria-pressed',String(on));
   const b=$('bgmBtn');if(b){b.textContent=on?'♪ 켜짐':'♪ 꺼짐';b.setAttribute('aria-pressed',String(on))}}
-function stopNoise(){if(noise){try{noise.src.stop()}catch(e){}clearInterval(noise.clink);noise=null}noiseUI()}
+function stopNoise(){if(noise){const n=noise;noise=null;try{const a=ac();n.g.gain.cancelScheduledValues(a.currentTime);n.g.gain.setValueAtTime(n.g.gain.value,a.currentTime);n.g.gain.linearRampToValueAtTime(0,a.currentTime+.4);setTimeout(()=>{try{n.src&&n.src.stop()}catch(e){}try{n.g.disconnect()}catch(e){}},500)}catch(e){}}noiseUI()}
 let BGM=true;try{BGM=localStorage.getItem('barista.bgm')!=='0'}catch(e){}
 function setBgm(on){BGM=on;try{localStorage.setItem('barista.bgm',on?'1':'0')}catch(e){}if(on){if(!noise)startNoise()}else stopNoise()}
 $('sNoise').onclick=()=>setBgm(!noise);
