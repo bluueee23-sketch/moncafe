@@ -1053,7 +1053,7 @@ body{background:var(--bg);background-image:radial-gradient(rgba(120,90,60,.06) 1
       <div class="board-head">
         <div>
           <h2>오늘의 메뉴</h2>
-          <p>출근했으면 직원 음료부터! 한 잔 만들어 휴게석에 앉으면 공부 시작. 공부하는 동안 손님이 오면 내가 알아서 만들어 드리고 팁을 받아요.</p>
+          <p>출근했으면 직원 음료부터! 한 잔 만들어 휴게석에 앉으면 바로 공부 시작. 공부하는 동안 손님이 오면 내가 알아서 만들어 드리고 팁을 받아요.</p>
         </div>
         <div class="bhbtns"><button class="btn crema" id="takeOrder">손님 주문 받기</button><button class="btn ask" id="autoBrew" title="내 최애 음료를 박소금이 만들어서 자리로 가져다줘요"><span id="autoBrewLbl">늘 먹던 걸로</span><small id="autoBrewSub">박소금이 만들어 줘요</small></button></div>
       </div>
@@ -1419,7 +1419,7 @@ function finish(){
   a.innerHTML=C.guest
     ?`<button class="btn crema" id="dNext">다음 손님 받기</button><button class="btn" id="dSit">직원 음료로 마시며 공부하기</button><button class="btn ghost" id="dMenu">메뉴판</button>`
     :`<button class="btn" id="dSit">이 잔 들고 휴게석으로</button><button class="btn ghost" id="dMenu">다른 메뉴 만들기</button>`;
-  $('dSit').onclick=()=>openStudy();
+  $('dSit').onclick=()=>{openStudy();$('sGo').click()};
   $('dMenu').onclick=()=>{show('scrMenu');renderMenu()};
   if($('dNext'))$('dNext').onclick=()=>$('takeOrder').click();
   renderLedger();show('scrDone');
@@ -1450,9 +1450,15 @@ function breakOver(){
   toast('5분 쉬는 시간 끝! 다음 잔 만들러 가요.');syncPresence();
 }
 function renderChips(){
-  $('chips').innerHTML=PRESETS.map(m=>`<button class="chip" data-m="${m}" aria-pressed="${S.dur===m}" ${S.running||S.elapsed>0?'disabled':''}>${m}분</button>`).join('');
-  $('chips').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{S.dur=+c.dataset.m;renderChips();renderStudy()});
+  $('chips').innerHTML=PRESETS.map(m=>`<button class="chip" data-m="${m}" aria-pressed="${S.dur===m}" ${chipLock()?'disabled':''}>${m}분</button>`).join('');
+  $('chips').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{
+    if(chipLock())return;S.dur=+c.dataset.m;
+    if(S.running){S.elapsed=0;S.start=Date.now();syncPresence();saveStudy()}
+    renderChips();renderStudy()});
 }
+/* 자동으로 공부가 시작돼도 처음 1분 안에는 시간을 바꿀 수 있어요 */
+const chipLock=()=>S.done||!!S.brk||elapsed()>=60;
+let chipWas=null;
 const elapsed=()=>S.elapsed+(S.running?(Date.now()-S.start)/1000:0);
 /* keep the running session in the browser so an update or refresh doesn't reset it */
 let lastSS=0;
@@ -1476,6 +1482,7 @@ function renderStudy(){
   $('sGo').textContent=S.running?'잠깐 멈춤':e>0?'이어서 공부':'공부 시작';$('sGo').hidden=!!S.done;
   if(p>=1&&!S.done)complete();
   else if(S.running)checkGuest();
+  const lk=chipLock();if(lk!==chipWas){chipWas=lk;renderChips()}
   if(Date.now()-lastSS>4000){lastSS=Date.now();saveStudy()}
 }
 $('sGo').onclick=async()=>{
@@ -2273,7 +2280,7 @@ function autoBrew(){
     AUTOBREW=null;$('autoBrew').disabled=false;
     const i=ideal(r);MADE={r,kind:i.kind,L:i.L,ice:i.ice,st:3,idx:-1,left:1};
     const d=day();d.cups.push({n:r.n,st:3,at:hhmm(),guest:null,tip:0,min:0,ordered:1});save();MADE.idx=d.cups.length-1;saveCup();
-    renderLedger();toast(self?`${r.n} 완성! 자리로 가져갈게요.`:`${who}: 주문하신 ${r.n} 나왔습니다~`);openStudy();
+    renderLedger();toast(self?`${r.n} 완성! 자리로 가져갈게요.`:`${who}: 주문하신 ${r.n} 나왔습니다~`);openStudy();$('sGo').click();
     setTimeout(()=>{if(AB&&Date.now()>=AB.del){AB=null;syncPresence();lastSig='';renderFriends()}},AB_DELIVER+200);
   },AB_MAKE);
 }
