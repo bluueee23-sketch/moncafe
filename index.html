@@ -2244,9 +2244,20 @@ let IDLE_SAY=null,IDLE_NEXT=Date.now()+4*60000;const IDLE_T0=Date.now();
 function idleLine(I,ppl){
   const now=Date.now(),me=ppl&&ppl[0],nm=me&&typeof me.pr.nick==='string'&&me.pr.nick.trim()?me.pr.nick.trim().slice(0,8):'';
   if(IDLE_SAY&&now<IDLE_SAY.until&&IDLE_SAY.who===I.name)return IDLE_SAY.t;
-  if(now-IDLE_T0<7000)return I.badge==='점장'?`${nm?nm+'님 ':''}출근했어요? 오늘도 화이팅!`:`어서오세요~ ${nm?nm+'님 ':''}오늘도 출근하셨네요 ☕`;
+  if(now-IDLE_T0<8000)return hello(I,nm);
   if(now>IDLE_NEXT){IDLE_NEXT=now+(6+Math.random()*6)*60000;idleSay(I.name)}
   return IDLE_SAY&&now<IDLE_SAY.until?IDLE_SAY.t:'';
+}
+/* 출근 인사: 알바생이 늦게 왔다고 놀려요 */
+const HELLO_R=Math.random();
+function hello(I,nm){
+  const h=new Date().getHours(),n=nm?nm+'님':'',boss=I.badge==='점장';
+  const pick=a=>a[HELLO_R*a.length|0];
+  if(h>=5&&h<10)return pick([`오 일찍 왔네요? 웬일 ㅋㅋ`,`${n} 일찍 출근! ✨`]);
+  if(h>=23||h<5)return pick([`이 시간에 출근이요?? ㅋㅋ`,`야간 근무 신청했어요?`]);
+  return pick(boss
+    ?[`왜 이렇게 늦게 왔어요? ㅋㅋ`,`${n} 지각! 봐줄게요 ☕`,`늦었어요~ 앞치마 매요!`,`손님 밀렸잖아요 ㅋㅋ`]
+    :[`왜 이렇게 늦게 와요~ ㅋㅋ`,`${n} 지각! 안 이를게요 ㅎ`,`왔어요? 혼자 죽는 줄 ㅋㅋ`,`늦었어요~ 앞치마 매요!`]);
 }
 const IDLE_LINES=['컵 닦는 중…','오늘 원두 향 좋다','필요하면 "늘 먹던 걸로" 눌러요~','다들 집중 잘 되시나요?','시럽 채워놔야지','조용히 일하는 중…','물도 한 잔 드세요!','진돌이 또 자네 ㅎㅎ'];
 function idleSay(who,t){IDLE_SAY={who,t:t||IDLE_LINES[Math.random()*IDLE_LINES.length|0],until:Date.now()+6000}}
@@ -2434,8 +2445,9 @@ async function renderFriends(){
      // 아무도 안 시켜도 바 뒤에 늘 서 있는 직원: 공개 매장은 박소금, 우리 매장은 점장(점장이 지금 매장에 있으면 박소금이 대신 서요)
      {const here=n=>ppl.some(e=>!e.isNpc&&typeof e.pr.nick==='string'&&e.pr.nick.trim()===n);
       const ownHere=inStore()&&typeof META!=='undefined'&&META&&META.owner&&ppl.some(e=>!e.isNpc&&e.peer===META.owner);
-      let I=inStore()&&!ownHere&&!BS.self?{name:BS.name,badge:'점장',look:BS.look}:{name:SALT,badge:'직원',look:SALT_LOOK};
-      const busy=STAFF.some(x=>x.name===I.name)||(I.name===SALT&&here(SALT));
+      // 우리 매장: 점장이 출근해 있으면 자리에 앉아 있고, 아직이면 바 뒤에 서 있어요(박소금은 공개 매장에만)
+      const I=inStore()?{name:BS.name,badge:'점장',look:BS.look}:{name:SALT,badge:'직원',look:SALT_LOOK};
+      const busy=(inStore()&&(ownHere||BS.self))||STAFF.some(x=>x.name===I.name)||(!inStore()&&here(SALT));
       const b=[1,0].find(i=>!used.has(i));
       if(!busy&&b!=null){used.add(b);const st={key:'staff:idle',isStaff:true,idle:true,badge:I.badge,peer:'staff:'+I.name,name:I.name,pr:{look:I.look,st:'idle'},bar:b};
         const ln=idleLine(I,ppl);st.bub=ln||'';st.bubS=ln||'';STAFF.push(st)}}}
@@ -2513,10 +2525,17 @@ function hallStatic(){
 <pattern id="tile" width="14" height="28" patternUnits="userSpaceOnUse"><rect width="14" height="28" fill="#23453A"/><rect x="1" y="1" width="12" height="26" rx="1.5" fill="#2F5C49"/><rect x="2.5" y="3" width="2.4" height="19" rx="1" fill="#fff" opacity=".13"/></pattern>
 <pattern id="terr" width="60" height="40" patternUnits="userSpaceOnUse"><circle cx="7" cy="9" r="1.6" fill="#9E9488"/><circle cx="31" cy="5" r="1.1" fill="#B47C5B"/><circle cx="48" cy="22" r="1.8" fill="#BFB4A5"/><circle cx="18" cy="30" r="1.2" fill="#7F786F"/><circle cx="40" cy="35" r="1" fill="#B47C5B"/><circle cx="55" cy="6" r="1.3" fill="#8F877C"/><rect x="24" y="19" width="3" height="2" fill="#A89E91"/></pattern>
 <radialGradient id="glowG"><stop offset="0" stop-color="#FFD58C" stop-opacity=".6"/><stop offset="1" stop-color="#FFD58C" stop-opacity="0"/></radialGradient>
-<clipPath id="archC"><path d="M45 318 V140 A92 92 0 0 1 229 140 V318 Z"/></clipPath></defs>`;
+<clipPath id="winC"><rect x="650" y="126" width="204" height="142"/></clipPath><clipPath id="archC"><path d="M45 318 V140 A92 92 0 0 1 229 140 V318 Z"/></clipPath></defs>`;
   const back=
    `<rect x="-1500" width="4000" height="340" fill="var(--sc-wall)"/><rect x="-1500" width="4000" height="340" fill="#000" filter="url(#lime)"/>`+
    `<rect x="630" y="0" width="2000" height="340" fill="url(#brick)"/>`+
+   // 바 뒤 창문: 시간에 따라 낮/노을/밤 하늘이 보여요
+   `<rect x="642" y="118" width="220" height="158" rx="5" fill="#7A5234"/><rect x="650" y="126" width="204" height="142" fill="url(#skyG)"/>`+
+   `<g clip-path="url(#winC)"><g style="opacity:var(--stars)">${[[668,140],[700,152],[724,134],[770,146],[838,138],[690,176],[742,168],[828,170],[662,192]].map(([x,y],i)=>`<circle cx="${x}" cy="${y}" r="${i%3?1:1.5}" fill="#fff"/>`).join('')}</g>`+
+   `<circle class="sunmoon" cx="818" cy="156" r="13"/>`+
+   `<path d="M650 268 V232 h26 v-18 h22 v18 h14 v-30 h30 v30 h18 v-14 h24 v-22 h28 v36 h20 v-12 h22 V268 Z" fill="#3E4A5C" opacity=".55"/>`+
+   `${[[656,238],[684,222],[722,212],[722,226],[782,224],[796,236],[828,244],[684,246],[754,240]].map(([x,y])=>`<rect x="${x}" y="${y}" width="5" height="6" style="fill:var(--win-lit)"/>`).join('')}</g>`+
+   `<path d="M752 126 V268 M650 198 H854" stroke="#7A5234" stroke-width="5"/><rect x="638" y="266" width="228" height="8" rx="2" fill="#8C6040"/>`+
    // lightbox ad board (replaces the window)
    `<rect x="16" y="70" width="284" height="246" rx="7" fill="#2A2624"/><rect x="22" y="76" width="272" height="234" rx="3" fill="#FFFDF7"/>`+
    `<rect x="50" y="314" width="7" height="24" fill="#2A2624"/><rect x="259" y="314" width="7" height="24" fill="#2A2624"/>`+
@@ -2529,14 +2548,13 @@ function hallStatic(){
    `<rect x="318" y="262" width="36" height="30" rx="8" fill="#EFE6D6"/><rect x="520" y="264" width="34" height="28" rx="8" fill="#8FA88A"/>`+
    `<rect x="296" y="298" width="280" height="22" rx="7" fill="#C9952F"/><rect x="302" y="318" width="268" height="20" fill="#8E6A2A"/>`+
    // shelves on brick
-   `<rect x="648" y="112" width="334" height="7" rx="1" fill="#B37D4E"/><rect x="648" y="180" width="334" height="7" rx="1" fill="#B37D4E"/>`+
+   `<rect x="648" y="112" width="334" height="7" rx="1" fill="#B37D4E"/><rect x="868" y="180" width="114" height="7" rx="1" fill="#B37D4E"/>`+
    jar(664)+jar(688)+jar(712)+
    `<ellipse cx="770" cy="110" rx="20" ry="3" fill="#F3EFE8"/><ellipse cx="770" cy="106" rx="20" ry="3" fill="#E8E2D8"/><ellipse cx="770" cy="102" rx="20" ry="3" fill="#F3EFE8"/>`+
    `<path d="M812 112 h22 l-3 -18 h-16 Z" fill="#EDE6DA"/><path d="M823 94 C812 80 806 72 810 64 C818 70 822 82 823 94 C826 80 832 70 840 68 C840 78 832 88 823 94" fill="#5A9A62"/>`+
    `<rect x="872" y="98" width="13" height="14" rx="2" fill="#fff"/><rect x="890" y="98" width="13" height="14" rx="2" fill="#fff"/><rect x="881" y="84" width="13" height="14" rx="2" fill="#fff"/>`+
    `<path d="M930 112 V84 Q930 78 937 78 H955 Q962 78 962 84 V112 Z" fill="#B88E62"/><rect x="934" y="92" width="24" height="10" fill="#F3EFE8"/>`+
-   `<ellipse cx="676" cy="174" rx="20" ry="7" fill="#C98A45"/><ellipse cx="712" cy="173" rx="18" ry="8" fill="#B87835"/><ellipse cx="746" cy="174" rx="16" ry="6" fill="#D49A55"/>`+
-   `<rect x="790" y="150" width="20" height="30" rx="4" fill="#E9E2D3" opacity=".9"/><rect x="790" y="162" width="20" height="18" rx="3" fill="#D9C08A"/><rect x="818" y="154" width="20" height="26" rx="4" fill="#E9E2D3" opacity=".9"/><rect x="818" y="164" width="20" height="16" rx="3" fill="#9C5A3A"/>`+
+   `<rect x="880" y="150" width="20" height="30" rx="4" fill="#E9E2D3" opacity=".9"/><rect x="880" y="162" width="20" height="18" rx="3" fill="#D9C08A"/><rect x="906" y="154" width="20" height="26" rx="4" fill="#E9E2D3" opacity=".9"/><rect x="906" y="164" width="20" height="16" rx="3" fill="#9C5A3A"/>`+
    `<path d="M935 180 h20 l-3 -22 h-14 Z" fill="#2F5C49"/><path d="M945 158 V136 M945 146 l-8 -6 M945 142 l8 -7" stroke="#4C8C58" stroke-width="2"/><circle cx="945" cy="134" r="4" fill="#E9A0A8"/>`+
    `<g transform="translate(-170 0)"><rect x="-58" y="130" width="116" height="140" fill="#B37D4E"/><rect x="-52" y="136" width="104" height="128" fill="#F3EDE2"/><circle cx="-8" cy="190" r="30" fill="#E6A15E"/><rect x="6" y="170" width="34" height="60" fill="#2F5D4C"/><path d="M-44 252 H44" stroke="#2A2624" stroke-width="2"/></g>`+
    `<g transform="translate(-390 0)"><rect x="-46" y="120" width="92" height="120" fill="#F7F1E6" stroke="#9A6A3F" stroke-width="5"/><circle cx="0" cy="168" r="26" fill="#E2A15B"/><path d="M-30 222 H30" stroke="#2F5D4C" stroke-width="5"/><text x="0" y="214" text-anchor="middle" font-size="12" fill="#2F5D4C" font-family="monospace">COFFEE</text></g>`+
@@ -2583,7 +2601,7 @@ function hudPerson(e,x,headY,nameY,hit,side){
   const pop=lastBub[e.key]!==e.bub;lastBub[e.key]=e.bub;
   const kind=e.isNpc?' ai':e.isStaff?' staffb':e.say?' say':' st';
   return (e.bub?`<span class="bub hb ${side||'mid'}${kind}${pop?' pop':''}" style="${pct(x,headY)}"><span class="lg">${esc(e.bub)}</span><span class="sh">${esc(e.bubS)}</span></span>`:'')+
-    `<span class="hname${e.isMe?' me':''}${e.isStaff?' staff':e.isNpc?' npc':' human'}" style="${pct(Math.min(Math.max(x,VX+70),VX+VBW-70),nameY)};max-width:${((116*TS-10)/VBW*100).toFixed(2)}%"><span class="nl">${e.isStaff?`<i class="aib stf">${e.badge||'직원'}</i>`:e.isNpc?'<i class="aib">AI</i>':'<i class="dot"></i>'+(typeof isOwnerPeer==='function'&&isOwnerPeer(e.peer)?'<i class="aib own">점장</i>':'')}<b class="nm">${esc(e.name)}</b>${!e.isNpc&&!e.isMe&&!e.isStaff?friendHearts(e.peer):''}</span>${e.isStaff?'':`<span class="ftime" data-k="${esc(e.key)}"></span>`}</span>`+(e.isStaff&&!hit?'':
+    (e.noName?'':`<span class="hname${e.isMe?' me':''}${e.isStaff?' staff':e.isNpc?' npc':' human'}" style="${pct(Math.min(Math.max(x,VX+70),VX+VBW-70),nameY)};max-width:${((116*TS-10)/VBW*100).toFixed(2)}%"><span class="nl">${e.isStaff?`<i class="aib stf">${e.badge||'직원'}</i>`:e.isNpc?'<i class="aib">AI</i>':'<i class="dot"></i>'+(typeof isOwnerPeer==='function'&&isOwnerPeer(e.peer)?'<i class="aib own">점장</i>':'')}<b class="nm">${esc(e.name)}</b>${!e.isNpc&&!e.isMe&&!e.isStaff?friendHearts(e.peer):''}</span>${e.isStaff?'':`<span class="ftime" data-k="${esc(e.key)}"></span>`}</span>`)+(e.isStaff&&!hit?'':
     `<button class="hhit${selKey===e.key?' sel':''}" data-k="${esc(e.key)}" aria-label="${esc(e.name+': '+(e.bub||e.stat||''))}" style="${box(hit[0],hit[1],hit[2],hit[3])}"></button>`);
 }
 function drawFloor(taken){
@@ -2616,10 +2634,12 @@ function drawFloor(taken){
     }
     for(const st of STAFF){if(st.to==null||(st.to>>1)!==t)continue;
       // 테이블 앞(통로 쪽)에 서서 그 사람 쪽으로 건네줘요
-      const side=st.to&1,face=side?-1:1,sx=cx-face*26,by=FY+40;
+      // 앉은 사람 바깥쪽 옆에 서서(겹치지 않게) 잔을 건네줘요
+      const side=st.to&1,face=side?-1:1,sx=cx-face*132,by=FY-24;
       fl+=mmPlace(st,sx,by,{apron:true,face:'happy'});
-      const jc=byId(st.pr.d)||byId('jc'),ji=ideal(jc);fl+=cupSVG(ji.kind,ji.L,{ice:ji.ice,straw:jc.ice}).replace('<svg viewBox="0 0 200 250"',`<svg x="${sx-face*16-9}" y="${by-62}" width="18" height="22" viewBox="0 0 200 250"`);
-      const X=cx+(sx-cx)*TS;hud+=hudPerson(st,X,FY+(by-FY-108)*TS,FY+(by-FY+6)*TS,null,face>0?'r':'l');}
+      const jc=byId(st.pr.d)||byId('jc'),ji=ideal(jc);fl+=cupSVG(ji.kind,ji.L,{ice:ji.ice,straw:jc.ice}).replace('<svg viewBox="0 0 200 250"',`<svg x="${sx+face*34-9}" y="${by-58}" width="18" height="22" viewBox="0 0 200 250"`);
+      const X=cx+(sx-cx)*TS,sd=X<VX+150?'r':X>VX+VBW-150?'l':face>0?'l':'r';st.noName=1;st.lift=1;
+      hud+=hudPerson(st,X,FY+(by-FY-112)*TS,0,null,sd);}
     fl+='</g>';
   });
   $('dynBar').innerHTML=bar;$('dynFloor').innerHTML=fl;$('hud').innerHTML=hud;
