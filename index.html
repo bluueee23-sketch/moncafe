@@ -2239,6 +2239,17 @@ function jdInit(){
 }
 
 
+/* 바 뒤 직원의 혼잣말: 들어올 때 인사, 눌렀을 때, 그리고 가끔 */
+let IDLE_SAY=null,IDLE_NEXT=Date.now()+4*60000;const IDLE_T0=Date.now();
+function idleLine(I,ppl){
+  const now=Date.now(),me=ppl&&ppl[0],nm=me&&typeof me.pr.nick==='string'&&me.pr.nick.trim()?me.pr.nick.trim().slice(0,8):'';
+  if(IDLE_SAY&&now<IDLE_SAY.until&&IDLE_SAY.who===I.name)return IDLE_SAY.t;
+  if(now-IDLE_T0<7000)return I.badge==='점장'?`${nm?nm+'님 ':''}출근했어요? 오늘도 화이팅!`:`어서오세요~ ${nm?nm+'님 ':''}오늘도 출근하셨네요 ☕`;
+  if(now>IDLE_NEXT){IDLE_NEXT=now+(6+Math.random()*6)*60000;idleSay(I.name)}
+  return IDLE_SAY&&now<IDLE_SAY.until?IDLE_SAY.t:'';
+}
+const IDLE_LINES=['컵 닦는 중…','오늘 원두 향 좋다','필요하면 "늘 먹던 걸로" 눌러요~','다들 집중 잘 되시나요?','시럽 채워놔야지','조용히 일하는 중…','물도 한 잔 드세요!','진돌이 또 자네 ㅎㅎ'];
+function idleSay(who,t){IDLE_SAY={who,t:t||IDLE_LINES[Math.random()*IDLE_LINES.length|0],until:Date.now()+6000}}
 /* ---------- "늘 먹던 걸로": 내 최애 음료를 직원 박소금이 만들어서 자리로 가져다줘요 ---------- */
 let AUTOBREW=null,AB=null;
 const SALT='박소금',AB_MAKE=6000,AB_DELIVER=4500;
@@ -2419,7 +2430,15 @@ async function renderFriends(){
        const making=now<ab[0],ad=byId(ab[2])?ab[2]:'jc',an=byId(ad).n,en=(typeof e.pr.nick==='string'&&e.pr.nick.trim()?e.pr.nick.trim().slice(0,12):'손님');const st={key:'staff:'+e.key,isStaff:true,badge:BS.badge,peer:'staff',name:BS.name,for:e,pr:{look:BS.look,st:'making',d:ad}};
        if(making){const b=[0,1].find(i=>!used.has(i));if(b==null)continue;used.add(b);st.bar=b;st.bub=(e.isMe?'늘 드시던 ':en+'님 늘 먹던 ')+an+' 만드는 중…';st.bubS=an+' 만드는 중…'}
        else{if(e.seat==null||e.seat<0)continue;st.to=e.seat;st.bub=(e.isMe?'주문하신 ':en+'님, ')+an+' 나왔습니다~';st.bubS='배달 왔어요~'}
-       STAFF.push(st)}}
+       STAFF.push(st)}
+     // 아무도 안 시켜도 바 뒤에 늘 서 있는 직원: 공개 매장은 박소금, 우리 매장은 점장(점장이 지금 매장에 있으면 박소금이 대신 서요)
+     {const here=n=>ppl.some(e=>!e.isNpc&&typeof e.pr.nick==='string'&&e.pr.nick.trim()===n);
+      const ownHere=inStore()&&typeof META!=='undefined'&&META&&META.owner&&ppl.some(e=>!e.isNpc&&e.peer===META.owner);
+      let I=inStore()&&!ownHere&&!BS.self?{name:BS.name,badge:'점장',look:BS.look}:{name:SALT,badge:'직원',look:SALT_LOOK};
+      const busy=STAFF.some(x=>x.name===I.name)||(I.name===SALT&&here(SALT));
+      const b=[1,0].find(i=>!used.has(i));
+      if(!busy&&b!=null){used.add(b);const st={key:'staff:idle',isStaff:true,idle:true,badge:I.badge,peer:'staff:'+I.name,name:I.name,pr:{look:I.look,st:'idle'},bar:b};
+        const ln=idleLine(I,ppl);st.bub=ln||'';st.bubS=ln||'';STAFF.push(st)}}}
     for(const e of ppl){
       const pf=e.by?prof[e.by]:null;
       e.name=(typeof e.pr.nick==='string'&&e.pr.nick.trim()?e.pr.nick.trim().slice(0,12):'')||(pf&&pf.name)||(e.isMe?'나':'손님');
@@ -2433,7 +2452,7 @@ async function renderFriends(){
       if(!e.isMe&&!e.isNpc)heardFrom(e);
     }
     PEOPLE=ppl;
-    const sig=(typeof META!=='undefined'&&META?META.owner:'')+JSON.stringify(STAFF.map(e=>[e.key,e.bar,e.to]))+JSON.stringify(ppl.map(e=>[e.key,e.seat,e.bar,e.isNpc||e.isMe?0:friendLv(e.peer).lv,e.rem!=null&&e.pr.st==='study',e.name,e.pr.look,e.bub,e.say,e.pr.d,e.pr.st,Math.round((leftOf(e)??0)*20)]))+selKey;
+    const sig=(typeof META!=='undefined'&&META?META.owner:'')+JSON.stringify(STAFF.map(e=>[e.key,e.bar,e.to,e.bub,e.name]))+JSON.stringify(ppl.map(e=>[e.key,e.seat,e.bar,e.isNpc||e.isMe?0:friendLv(e.peer).lv,e.rem!=null&&e.pr.st==='study',e.name,e.pr.look,e.bub,e.say,e.pr.d,e.pr.st,Math.round((leftOf(e)??0)*20)]))+selKey;
     if(sig!==lastSig){lastSig=sig;drawFloor(taken);fitNames()}
     tickTimes();
     const others=real-1,nN=ppl.length-real;
@@ -2564,7 +2583,7 @@ function hudPerson(e,x,headY,nameY,hit,side){
   const pop=lastBub[e.key]!==e.bub;lastBub[e.key]=e.bub;
   const kind=e.isNpc?' ai':e.isStaff?' staffb':e.say?' say':' st';
   return (e.bub?`<span class="bub hb ${side||'mid'}${kind}${pop?' pop':''}" style="${pct(x,headY)}"><span class="lg">${esc(e.bub)}</span><span class="sh">${esc(e.bubS)}</span></span>`:'')+
-    `<span class="hname${e.isMe?' me':''}${e.isStaff?' staff':e.isNpc?' npc':' human'}" style="${pct(Math.min(Math.max(x,VX+70),VX+VBW-70),nameY)};max-width:${((116*TS-10)/VBW*100).toFixed(2)}%"><span class="nl">${e.isStaff?`<i class="aib stf">${e.badge||'직원'}</i>`:e.isNpc?'<i class="aib">AI</i>':'<i class="dot"></i>'+(typeof isOwnerPeer==='function'&&isOwnerPeer(e.peer)?'<i class="aib own">점장</i>':'')}<b class="nm">${esc(e.name)}</b>${!e.isNpc&&!e.isMe&&!e.isStaff?friendHearts(e.peer):''}</span>${e.isStaff?'':`<span class="ftime" data-k="${esc(e.key)}"></span>`}</span>`+(e.isStaff?'':
+    `<span class="hname${e.isMe?' me':''}${e.isStaff?' staff':e.isNpc?' npc':' human'}" style="${pct(Math.min(Math.max(x,VX+70),VX+VBW-70),nameY)};max-width:${((116*TS-10)/VBW*100).toFixed(2)}%"><span class="nl">${e.isStaff?`<i class="aib stf">${e.badge||'직원'}</i>`:e.isNpc?'<i class="aib">AI</i>':'<i class="dot"></i>'+(typeof isOwnerPeer==='function'&&isOwnerPeer(e.peer)?'<i class="aib own">점장</i>':'')}<b class="nm">${esc(e.name)}</b>${!e.isNpc&&!e.isMe&&!e.isStaff?friendHearts(e.peer):''}</span>${e.isStaff?'':`<span class="ftime" data-k="${esc(e.key)}"></span>`}</span>`+(e.isStaff&&!hit?'':
     `<button class="hhit${selKey===e.key?' sel':''}" data-k="${esc(e.key)}" aria-label="${esc(e.name+': '+(e.bub||e.stat||''))}" style="${box(hit[0],hit[1],hit[2],hit[3])}"></button>`);
 }
 function drawFloor(taken){
@@ -2574,7 +2593,7 @@ function drawFloor(taken){
     hud+=hudPerson(e,x,BARY-128,BARY+4,[x-36,BARY-128,72,128],e.bar?'r':'l');}
   for(const st of STAFF){if(st.bar==null)continue;const x=BARX[st.bar];
     bar+=mmPlace(st,x,BARY-22,{apron:true,face:'focus'});
-    hud+=hudPerson(st,x,BARY-128,BARY+4,null,st.bar?'r':'l');}
+    hud+=hudPerson(st,x,BARY-128,BARY+4,st.idle?[x-36,BARY-128,72,128]:null,st.bar?'r':'l');}
   // stack bubbles that would overlap at the same height (per row)
   const placed=[];
   TABLES.forEach((tb,t)=>{for(const side of[0,1]){const e=taken[2*t+side];if(!e)continue;if(!e.bub){e.lift=0;e.sd=(tb.cx+(side?58:-58)*TS)<VX+130?'r':(tb.cx+(side?58:-58)*TS)>VX+VBW-130?'l':side?'r':'l';continue}
@@ -2610,6 +2629,7 @@ $('hud').addEventListener('click',ev=>{
   if(s){claimSeat(+s.dataset.seat);const wasNpc=s.classList.contains('npcseat');setPick(false);syncPresence();lastSig='';renderFriends();
     toast(wasNpc?`손님이 자리를 비켜줬어요. ${mySeat+1}번 자리로 옮겼어요.`:`${mySeat+1}번 자리로 옮겼어요.`);return}
   const h=ev.target.closest('.hhit');if(!h)return;
+  if(h.dataset.k==='staff:idle'){const st=STAFF.find(x=>x.idle);if(st){idleSay(st.name,['네~ 부르셨어요?','오늘도 화이팅이에요!','필요한 거 있으면 말해요 ☕','열심히 하는 모습 보기 좋아요','잠깐 쉬어가도 괜찮아요','늘 먹던 걸로 만들어 드릴까요?'][Math.random()*6|0]);lastSig='';renderFriends()}return}
   const e=PEOPLE.find(x=>x.key===h.dataset.k);if(!e)return;
   if(e.isMe){if(needName())openNameEdit();else $('sayIn').focus();return}
   selKey=selKey===e.key?null:e.key;showSel();lastSig='';renderFriends();
